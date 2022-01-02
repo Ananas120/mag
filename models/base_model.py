@@ -1172,6 +1172,7 @@ class BaseModel(metaclass = ModelInstances):
             dataset   = strategy.experimental_distribute_dataset(dataset)
                         
         # Prepare metrics and logs
+        if metrics is not None and not isinstance(metrics, list): metrics = [metrics]
         self.compiled_metrics    = self.get_compiled_metrics(metrics, add_loss = add_loss)
         
         # Prepare callbacks

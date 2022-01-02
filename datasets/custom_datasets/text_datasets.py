@@ -24,14 +24,12 @@ def _clean_paragraph(para):
         
 def _clean_answer(context, answer, answer_start):
     from utils.text.cleaners import remove_control
-
-    answer = remove_control(answer)
-    start, end = answer_start, answer_start + len(answer)
     
-    while start > 0 and context[start - 1] not in _spaces: start -= 1
-    while end < len(context) - 1 and context[end + 1] not in _spaces: end += 1
+    answer = remove_control(answer).strip()
+    if answer not in context:
+        raise ValueError("Invalid answer {} !".format(answer))
     
-    return {'text' : context[start : end + 1], 'answer_start' : start, 'answer_end' : end}
+    return {'text' : answer, 'answer_start' : answer_start, 'answer_end' : answer_start + len(answer)}
 
 @timer(name = 'europarl loading')
 def preprocess_europarl_annots(directory, base_name, input_lang, output_lang):
