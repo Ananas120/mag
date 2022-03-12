@@ -157,7 +157,7 @@ Each model has been trained and validated on `NaturalQuestions` and tested on `S
 
 Note that some parameters are not relevant as dependant of other parameters (`shuffle_size = 32 * batch_size`) while some others are memory-dependant (`batch_size`)
 
-![Parameters' impact on Test F1](images/test_F1.png)
+![Parameters' impact on Test F1](images/test_f1.png)
 
 ![Top-k test F1](images/top-k.png)
 
