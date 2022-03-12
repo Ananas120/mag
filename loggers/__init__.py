@@ -1,15 +1,29 @@
+
+# Copyright (C) 2022 yui-mhcp project's author. All rights reserved.
+# Licenced under the Affero GPL v3 Licence (the "Licence").
+# you may not use this file except in compliance with the License.
+# See the "LICENCE" file at the root of the directory for the licence information.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import sys
 import logging
 
 from logging.handlers import SMTPHandler
 
-from utils.generic_utils import get_object
+try:
+    from utils.generic_utils import get_object
+except ImportError as e:
+    from loggers.utils import get_object
 from loggers.time_logger import TIME_LEVEL, timer
 from loggers.telegram_handler import TelegramHandler
 
 DEV     = 11
-logging.addLevelName(DEV, 'DEV')
 
 _styles = {
     'basic' : '{message}',
@@ -18,7 +32,6 @@ _styles = {
 }
 _levels = {
     'debug' : logging.DEBUG,
-    'dev'   : DEV,
     'time'  : TIME_LEVEL,
     'info'  : logging.INFO,
     'warning'   : logging.WARNING,
@@ -35,8 +48,18 @@ logging.basicConfig(
     format = _default_format, style = '%' if '%' in _default_format else '{'
 )
 
+def add_level(value, name):
+    def _special_log(* args, ** kwargs):
+        return logging.log(value, * args, ** kwargs)
+    
+    global _levels
+    _levels[name.lower()] = value
+
+    logging.addLevelName(value, name.upper())
+    setattr(logging, name.lower(), _special_log)
+
 def set_style(style, logger = None):
-    global default_style
+    global _default_style
     _default_style = style
     
     formatter = get_formatter(style)
@@ -45,6 +68,8 @@ def set_style(style, logger = None):
         handler.setFormatter(formatter)
 
 def set_level(level, logger = None):
+    global _levels
+    if isinstance(level, str): level = level.lower()
     logging.getLogger(logger).setLevel(_levels.get(level, level))
 
 def get_formatter(format = _default_style, style = None, datefmt = None, ** kwargs):
@@ -55,6 +80,7 @@ def get_formatter(format = _default_style, style = None, datefmt = None, ** kwar
 
 def add_handler(handler_name, * args, logger = None, level = None,
                 add_formatter = True, ** kwargs):
+    global _default_style, _levels
     if logger is None: logger = logging.getLogger()
     elif isinstance(logger, str): logger = logging.getLogger(logger)
     
@@ -98,3 +124,5 @@ _handlers   = {
     'tts'       : try_tts_handler,
     'telegram'  : TelegramHandler
 }
+
+add_level(DEV, 'DEV')

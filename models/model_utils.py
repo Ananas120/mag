@@ -1,4 +1,17 @@
+
+# Copyright (C) 2022 yui-mhcp project's author. All rights reserved.
+# Licenced under the Affero GPL v3 Licence (the "Licence").
+# you may not use this file except in compliance with the License.
+# See the "LICENCE" file at the root of the directory for the licence information.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
+import glob
 import numpy as np
 import pandas as pd
 
@@ -6,6 +19,17 @@ from utils import load_json
 from custom_train_objects.history import History
 
 _pretrained_models_folder = 'pretrained_models'
+
+def get_models(pattern = None, model_class = None):
+    names = os.listdir(_pretrained_models_folder) if pattern is None else [
+        os.path.basename(f) for f in glob.glob(os.path.join(_pretrained_models_folder, pattern))
+    ]
+    
+    names = [n for n in names if is_model_name(n)]
+    if model_class is not None:
+        if not isinstance(model_class, (list, tuple)): model_class = [model_class]
+        names = [n for n in names if get_model_class(n) in model_class]
+    return names
 
 def get_model_dir(name, * args):
     return os.path.join(_pretrained_models_folder, name, * args)
@@ -19,6 +43,9 @@ def get_model_infos(name):
             'class_name' : name.__class__.__name__, 'config' : name.get_config(with_trackable_variables = False)
         }
     return load_json(get_model_dir(name, 'config.json'), default = {})
+
+def get_model_class(name):
+    return get_model_infos(name).get('class_name', None)
 
 def get_model_history(name):
     return History.load(get_model_dir(name, 'saving', 'historique.json'))

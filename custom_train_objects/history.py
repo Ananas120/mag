@@ -1,3 +1,15 @@
+
+# Copyright (C) 2022 yui-mhcp project's author. All rights reserved.
+# Licenced under the Affero GPL v3 Licence (the "Licence").
+# you may not use this file except in compliance with the License.
+# See the "LICENCE" file at the root of the directory for the licence information.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import logging
 import datetime
@@ -36,6 +48,7 @@ class History(tf.keras.callbacks.Callback):
         self.__trainings    = []
         
         self.__phase    = SLEEPING
+        self.__test_prefix  = None
         self.__current_training_config  = {}
         self.__current_training_infos   = {}
         
@@ -141,16 +154,16 @@ class History(tf.keras.callbacks.Callback):
     def valid_metrics(self):
         metrics = []
         for _, infos in self.__history.items():
-            metrics += infos['infos'].get('valid_metrics', [])
+            metrics += [m for m in infos['metrics'].keys() if m.startswith('val')]
         return list(set(metrics))
     
     @property
     def test_metrics(self):
         metrics = []
         for _, infos in self.__history.items():
-            metrics += infos['infos'].get('test_metrics', [])
+            metrics += [m for m in infos['metrics'].keys() if m.startswith('test')]
         return list(set(metrics))
-            
+    
     def __len__(self):
         return len(self.__history)
     
@@ -166,12 +179,33 @@ class History(tf.keras.callbacks.Callback):
     def __str__(self):
         return "===== History =====\n{}".format(pd.DataFrame(self.history))
     
+    def contains(self, metric_name, epoch = -1):
+        if len(self) == 0: return False
+        return any([metric_name == k for k, _ in self[epoch].items()])
+    
+    def pop(self, test_prefix, epoch = -1):
+        if len(self) == 0: return None
+        if epoch < 0: epoch = epoch + 1 + max(self.__history.keys())
+        metrics = self.__history[epoch]['infos'].get('{}_metrics'.format(test_prefix), [])
+        
+        for k in list(self.__history[epoch]['infos'].keys()):
+            if '_'.join(k.split('_')[:-1]) == test_prefix:
+                print("Pop info {}".format(k))
+                self.__history[epoch]['infos'].pop(k)
+        
+        for metric in metrics:
+            print("Pop metric {}".format(metric))
+            self.__history[epoch]['metrics'].pop(metric)
+    
     def set_history(self, history, trainings):
         self.__history      = {int(k) : v for k, v in history.items()}
         self.__trainings    = trainings
     
     def set_params(self, params):
         self.__current_training_config.update(to_json(params))
+        self.__test_prefix = params.get('test_prefix', None)
+        if self.__test_prefix is not None and self.__test_prefix.endswith('_'):
+            self.__test_prefix = self.__test_prefix[:-1]
     
     def get_epoch_config(self, epoch):
         for t in self.__trainings:
@@ -367,31 +401,32 @@ class History(tf.keras.callbacks.Callback):
     
     def on_test_begin(self, logs = None):
         if self.training:
-            key = 'valid'
+            default_prefix = 'valid'
             self.__phase    = VALIDATING
         else:
-            key = 'test'
+            default_prefix = 'test'
             self.__phase    = TESTING
             self.__current_epoch_infos      = self.__history[self.current_epoch]['infos']
             self.__current_epoch_history    = self.__history[self.current_epoch]['metrics']
         
+        if self.__test_prefix is None: self.__test_prefix = default_prefix
+        
         self.__current_batch    = -1
         self.__current_epoch_infos.update({
-            '{}_start'.format(key)  : datetime.datetime.now(),
-            '{}_end'.format(key)    : -1,
-            '{}_time'.format(key)   : -1,
-            '{}_size'.format(key)   : -1,
-            '{}_metrics'.format(key)    : []
+            '{}_start'.format(self.__test_prefix)  : datetime.datetime.now(),
+            '{}_end'.format(self.__test_prefix)    : -1,
+            '{}_time'.format(self.__test_prefix)   : -1,
+            '{}_size'.format(self.__test_prefix)   : -1,
+            '{}_metrics'.format(self.__test_prefix)    : []
         })
                 
     def on_test_end(self, logs = None):
         assert self.training or self.testing
-        key = 'valid' if self.training else 'test'
         
         t_end = datetime.datetime.now()
         self.__current_epoch_infos.update({
-            '{}_end'.format(key)   : t_end,
-            '{}_time'.format(key)  : (t_end - self.__current_epoch_infos['{}_start'.format(key)]).total_seconds()
+            '{}_end'.format(self.__test_prefix)   : t_end,
+            '{}_time'.format(self.__test_prefix)  : (t_end - self.__current_epoch_infos['{}_start'.format(self.__test_prefix)]).total_seconds()
         })
         
         if self.testing:
@@ -422,22 +457,21 @@ class History(tf.keras.callbacks.Callback):
         if isinstance(logs, dict): logs = logs.items()
         
         t = datetime.datetime.now()
-        key = 'valid' if self.training else 'test'
-        prefix = 'val' if self.training else 'test'
+        prefix = 'val' if self.training else self.__test_prefix
         for metric, value in logs:
             if metric.startswith('val_') and prefix == 'test':
                 metric = metric.replace('val', prefix)
             elif not metric.startswith(prefix): metric = '{}_{}'.format(prefix, metric)
-                
+            
             self.__current_epoch_history.setdefault(metric, []).append(value)
             
-            if metric not in self.__current_epoch_infos['{}_metrics'.format(key)]:
-                self.__current_epoch_infos['{}_metrics'.format(key)].append(metric)
+            if metric not in self.__current_epoch_infos['{}_metrics'.format(self.__test_prefix)]:
+                self.__current_epoch_infos['{}_metrics'.format(self.__test_prefix)].append(metric)
                
         self.__current_epoch_infos.update({
-            '{}_end'.format(key)     : t,
-            '{}_time'.format(key)    : (t - self.__current_epoch_infos['{}_start'.format(key)]).total_seconds(),
-            '{}_size'.format(key)    : batch + 1
+            '{}_end'.format(self.__test_prefix)     : t,
+            '{}_time'.format(self.__test_prefix)    : (t - self.__current_epoch_infos['{}_start'.format(self.__test_prefix)]).total_seconds(),
+            '{}_size'.format(self.__test_prefix)    : batch + 1
         })
             
     

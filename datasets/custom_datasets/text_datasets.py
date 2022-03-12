@@ -1,3 +1,15 @@
+
+# Copyright (C) 2022 yui-mhcp project's author. All rights reserved.
+# Licenced under the Affero GPL v3 Licence (the "Licence").
+# you may not use this file except in compliance with the License.
+# See the "LICENCE" file at the root of the directory for the licence information.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import logging
 import numpy as np
@@ -29,7 +41,49 @@ def _clean_answer(context, answer, answer_start):
     if answer not in context:
         raise ValueError("Invalid answer {} !".format(answer))
     
-    return {'text' : answer, 'answer_start' : answer_start, 'answer_end' : answer_start + len(answer)}
+    return {
+        'text' : answer, 'answer_start' : answer_start, 'answer_end' : answer_start + len(answer)
+    }
+
+def _select_answer(candidates, keep_mode):
+    assert keep_mode in ('all', 'concensus', 'shortest', 'longest')
+    
+    if keep_mode == 'all':
+        return list(set(candidates))
+    elif keep_mode == 'concensus':
+        counts = {}
+        for a in candidates:
+            counts.setdefault(a, 0)
+            counts[a] += 1
+        return sorted(counts.items(), key = lambda a: a[1], reverse = True)[0][0]
+    
+    return sorted(candidates, key = lambda a: len(a), reverse = keep_mode == 'longest')[0]
+    
+
+@timer(name = 'CoQA loading')
+def preprocess_coqa_annots(directory, subset, keep_mode = 'longest', ** kwargs):
+    assert subset in ('train', 'dev'), 'Unknown subset : {}'.format(subset)
+    
+    filename = os.path.join(directory, 'coqa-{}-v1.0.json'.format(subset))
+    
+    data = load_json(filename)['data']
+    
+    dataset = []
+    for instance in data:
+        base_infos = {
+            'id' : instance['id'], 'context_id' : instance['filename'], 'title' : instance['filename'], 'context' : instance['story']
+        }
+        questions = {
+            q['turn_id'] : q['input_text'] for q in instance['questions']
+        }
+        for a in instance['answers']:
+            dataset.append({
+                ** base_infos,
+                'question'  : questions[a['turn_id']],
+                'answers'   : a['input_text'] if keep_mode != 'all' else [a['input_text']]
+            })
+            
+    return pd.DataFrame(dataset)
 
 @timer(name = 'europarl loading')
 def preprocess_europarl_annots(directory, base_name, input_lang, output_lang):
@@ -46,21 +100,34 @@ def preprocess_europarl_annots(directory, base_name, input_lang, output_lang):
     return pd.DataFrame(data = datas, columns = [input_lang, output_lang])
 
 @timer(name = 'natural questions loading')
-def preprocess_nq_annots(directory, subset = 'train', file_no = -1, use_long_answer = False,
-                         include_document = False, allow_la = True, tqdm = lambda x: x, ** kwargs):
-    
+def preprocess_nq_annots(directory,
+                         subset     = 'train',
+                         file_no    = -1,
+                         
+                         use_long_answer    = False,
+                         include_document   = False,
+                         allow_la   = True,
+                         keep_mode  = 'longest',
+                         
+                         tqdm       = lambda x: x,
+                         
+                         ** kwargs
+                        ):
     def select_short_answer(row):
-        if not isinstance(row['short_answers'], list) or len(row['short_answers']) == 0:
-            return row['long_answer'] if allow_la or row['long_answer'] in ('yes', 'no') else ''
+        candidates = row['short_answers']
+        if isinstance(candidates, list): candidates = [a for a in candidates if a in row['context']]
         
-        candidates = [a for a in row['short_answers'] if a in row['context']]
-        return sorted(candidates, key = lambda a: len(a))[-1] if len(candidates) > 0 else row['long_answer']
+        if not isinstance(candidates, list) or len(candidates) == 0:
+            if not allow_la and row['long_answer'] not in ('yes', 'no'): return ''
+            candidates = [row['long_answer']]
+        
+        return _select_answer(candidates, keep_mode)
     
     if file_no == -1: file_no = list(range(50))
     if isinstance(file_no, (list, tuple)):
         return pd.concat([preprocess_nq_annots(
             directory, subset = subset, file_no = no, use_long_answer = use_long_answer,
-            include_document = include_document, tqdm = tqdm, ** kwargs
+            include_document = include_document, keep_mode = keep_mode, tqdm = tqdm, ** kwargs
         ) for no in file_no], ignore_index = True)
     
     dataset = parse_nq_annots(directory, subset = subset, file_no = file_no, tqdm = tqdm, ** kwargs)
@@ -71,7 +138,7 @@ def preprocess_nq_annots(directory, subset = 'train', file_no = -1, use_long_ans
     dataset.reset_index(drop = True, inplace = True)
     
     if include_document:
-        dataset['titles']       = dataset['paragraphs'].apply(lambda para: [p['title'] for p in para])
+        dataset['titles']   = dataset['paragraphs'].apply(lambda para: [p['title'] for p in para])
         dataset['paragraphs']   = dataset['paragraphs'].apply(lambda para: [p['text'] for p in para])
     else:
         dataset.pop('paragraphs')
@@ -93,8 +160,43 @@ def preprocess_nq_annots(directory, subset = 'train', file_no = -1, use_long_ans
 
     return dataset
 
+@timer(name = 'NewsQA loading')
+def preprocess_newsqa_annots(directory, subset, keep_mode = 'longest', ** kwargs):
+    assert subset in ('train', 'dev', 'test'), "Unknown subset : {}".format(subset)
+    
+    filename = os.path.join(directory, 'combined-newsqa-data-v1.json')
+    
+    data = load_json(filename)['data']
+    
+    dataset = []
+    for i, instance in enumerate(data):
+        if instance['type'] != subset: continue
+        if '--' in instance['text']:
+            title   = instance['text'].split('--')[0].strip()
+            context = '--'.join(instance['text'].split('--')[1:]).strip().replace('\n\n\n\n', '\n')
+        else:
+            title, context = '', instance['text']
+            
+        base_infos = {
+            'id'            : instance['storyId'],
+            'context_id'    : i,
+            'title'         : title,
+            'context'       : context
+        }
+        for q in instance['questions']:
+            if 's' not in q['consensus']: continue
+            
+            answer = instance['text'][q['consensus']['s'] : q['consensus']['e']]
+            dataset.append({
+                ** base_infos,
+                'question'  : q['q'],
+                'answers'   : answer if keep_mode != 'all' else [answer]
+            })
+            
+    return pd.DataFrame(dataset)
+
 @timer(name = 'parade loading')
-def preprocess_parade_annots(directory, subset = 'train', rename_siamese = True):
+def preprocess_parade_annots(directory, subset = 'train', rename_siamese = True, ** kwargs):
     filename = os.path.join(directory, 'PARADE_{}.txt'.format(subset))
     
     dataset = pd.read_csv(filename, sep = '\t')
@@ -108,7 +210,7 @@ def preprocess_parade_annots(directory, subset = 'train', rename_siamese = True)
     return dataset
 
 @timer(name = 'paws loading')
-def preprocess_paws_annots(directory, subset = 'train', rename_siamese = True):
+def preprocess_paws_annots(directory, subset = 'train', rename_siamese = True, ** kwargs):
     filename = os.path.join(directory, '{}.tsv'.format(subset))
     
     dataset = pd.read_csv(filename, sep = '\t')
@@ -121,8 +223,30 @@ def preprocess_paws_annots(directory, subset = 'train', rename_siamese = True):
     
     return dataset
 
+@timer(name = 'QAngaroo loading')
+def preprocess_qangaroo_annots(directory, subset, mode = 'wiki', keep_mode = 'longest', ** kwargs):
+    assert mode in ('wiki', 'med')
+    assert subset in ('train', 'dev'), "Unknown subset : {}".format(subset)
+    
+    filename = os.path.join(directory, mode + 'hop', '{}.json'.format(subset))
+    
+    data = load_json(filename)
+
+    dataset = []
+    for i, instance in enumerate(data):
+        dataset.append({
+            'id' : instance['id'],
+            'titles'    : [''] * len(instance['supports']),
+            'context'   : '\n\n'.format(instance['supports']),
+            'paragraphs'    : instance['supports'],
+            'question'  : instance['query'].replace('_', ' '),
+            'answers'   : instance['answer'] if keep_mode != 'all' else [instance['answer']]
+        })
+    
+    return pd.DataFrame(dataset)
+
 @timer(name = 'quora question pairs loading')
-def preprocess_qqp_annots(directory, subset = 'train', rename_siamese = True):
+def preprocess_qqp_annots(directory, subset = 'train', rename_siamese = True, ** kwargs):
     filename = os.path.join(directory, '{}.csv'.format(subset))
     
     dataset = pd.read_csv(filename, index_col = 0)
@@ -218,18 +342,10 @@ def preprocess_SQUAD_annots(directory, subset, version = '2.0', skip_impossible 
                             ** _base_infos, 'answers' : a['text'], 'answer_start' : a['answer_start']
                         })
                     continue
-
-                if keep_mode == 'all':
-                    answer  = [a['text'] for a in qa['answers']]
-                    answer_start    = [a['answer_start'] for a in qa['answers']]
-                elif keep_mode in ('longest', 'shortest'):
-                    sort = sorted(
-                        qa['answers'], key = lambda a: len(a['text']), reverse = keep_mode == 'longest'
-                    )
-                    answer, answer_start = sort[0]['text'], sort[0]['answer_start']
                 
+                candidates = [a['text'] for a in qa['answers']]
                 dataset.append({
-                    ** _base_infos, 'answers' : answer, 'answer_start' : answer_start
+                    ** _base_infos, 'answers' : _select_answer(candidates, keep_mode = keep_mode)
                 })
     
     dataset = pd.DataFrame(dataset)
@@ -237,8 +353,9 @@ def preprocess_SQUAD_annots(directory, subset, version = '2.0', skip_impossible 
     return dataset
 
 @timer(name = 'triviaqa loading')
-def preprocess_triviaqa_annots(directory, unfiltered = False, wikipedia = True, load_context = False,
-                               keep_doc_mode = 'one_per_line', subset = 'train', tqdm = lambda x: x, ** kwargs):
+def preprocess_triviaqa_annots(directory, unfiltered = False, wikipedia = True,
+                               load_context = False, keep_doc_mode = 'one_per_line', subset = 'train',
+                               tqdm = lambda x: x, ** kwargs):
     def get_contexts(contexts):
         result = []
         for c in contexts:
@@ -299,17 +416,25 @@ def preprocess_triviaqa_annots(directory, unfiltered = False, wikipedia = True, 
     return pd.DataFrame(metadata)
 
 @timer(name = 'parsed wikipedia loading')
-def preprocess_parsed_wiki_annots(directory):
+def preprocess_parsed_wiki_annots(directory, ** kwargs):
     filename = os.path.join(directory, 'psgs_w100.tsv')
     return pd.read_csv(filename, sep = '\t')
 
 
 _custom_text_datasets = {
+    'coqa'      : {
+        'train' : {'directory' : '{}/CoQA', 'subset' : 'train'},
+        'valid' : {'directory' : '{}/CoQA', 'subset' : 'dev'}
+    },
     'europarl'  : {
         'directory' : '{}/Europarl',
         'base_name' : 'europarl-v7.fr-en',
         'input_lang'    : 'en',
         'output_lang'   : 'fr'
+    },
+    'newsqa'    : {
+        'train' : {'directory' : '{}/newsqa', 'subset' : 'train'},
+        'valid' : {'directory' : '{}/newsqa', 'subset' : 'dev'}
     },
     'nq'        : {
         'train' : {'directory' : '{}/NaturalQuestions', 'subset' : 'train'},
@@ -322,6 +447,10 @@ _custom_text_datasets = {
     'paws'  : {
         'train' : {'directory' : '{}/PAWS', 'subset' : 'train'},
         'valid' : {'directory' : '{}/PAWS', 'subset' : 'dev'}
+    },
+    'qangaroo'  : {
+        'train' : {'directory' : '{}/qangaroo_v1.1', 'subset' : 'train'},
+        'valid' : {'directory' : '{}/qangaroo_v1.1', 'subset' : 'dev'}
     },
     'qqp'   : {
         'directory' : '{}/QQP',
@@ -348,10 +477,13 @@ _custom_text_datasets = {
 }
 
 _text_dataset_processing  = {
+    'coqa'          : preprocess_coqa_annots,
     'europarl'      : preprocess_europarl_annots,
+    'newsqa'        : preprocess_newsqa_annots,
     'nq'            : preprocess_nq_annots,
     'parade'        : preprocess_parade_annots,
     'paws'          : preprocess_paws_annots,
+    'qangaroo'      : preprocess_qangaroo_annots,
     'qqp'           : preprocess_qqp_annots,
     'snli'          : preprocess_snli_annots,
     'sts'           : process_sts_annots,

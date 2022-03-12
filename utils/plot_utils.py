@@ -1,6 +1,19 @@
+
+# Copyright (C) 2022 yui-mhcp project's author. All rights reserved.
+# Licenced under the Affero GPL v3 Licence (the "Licence").
+# you may not use this file except in compliance with the License.
+# See the "LICENCE" file at the root of the directory for the licence information.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import cv2
 import math
 import umap
+import logging
 import datetime
 import matplotlib
 import numpy as np
@@ -15,13 +28,13 @@ from sklearn.manifold import TSNE
 
 _tick_label_limit = 20
 
-def plot(x, y = None, *args, ax = None, figsize = None, xlim = None, ylim = None,
+def plot(x, y = None, * args, ax = None, figsize = None, xlim = None, ylim = None,
 
          title = None, xlabel = None, ylabel = None, 
          xtick_labels = None, ytick_labels = None, tick_labels = None,
          titlesize = 15, fontsize = 13, labelsize = 11, fontcolor = 'w',
          
-         legend_fontsize = 11, legend_kwargs = {},
+         with_legend = True, legend_fontsize = 11, legend_kwargs = {},
          
          vlines = None, vlines_kwargs = {}, hlines = None, hlines_kwargs = {},
          
@@ -33,9 +46,9 @@ def plot(x, y = None, *args, ax = None, figsize = None, xlim = None, ylim = None
          
          linewidth = 2.5, color = 'red', facecolor = 'black',
          
-         filename=None, show=True, close = True, new_fig = True, 
+         filename = None, show = True, close = True, new_fig = True, 
          
-         plot_type='plot', **kwargs
+         plot_type = 'plot', ** kwargs
         ):
     """
         Plot functions that combines multiple matplotlib functions. 
@@ -71,8 +84,47 @@ def plot(x, y = None, *args, ax = None, figsize = None, xlim = None, ylim = None
             - plot_type : a name of plt function to call for plot (plot / scatter / imshow / bar / hist / boxplot / ...)
             - kwargs    : additional kwargs to the plot function
     """
+    def normalize_xy(x, y, config):
+        p_type, p_config = plot_type, config.copy()
+        if callable(y):
+            if x is None:
+                assert xlim is not None, "When y is a callable, you must specify x or xlim"
+
+                x0, x1 = xlim
+                x = np.linspace(x0, x1, int((x1 - x0) * 10))
+            y = y(x)
+        elif isinstance(y, dict):
+            x, yi, p_type = y.pop('x', x), y.pop('y'), y.pop('plot_type', plot_type)
+
+            p_config, y = {** p_config, ** y}, yi
+        
+        datas = (x, y) if x is not None else (y, )
+        return datas, p_type, p_config
+    
+    def _plot_data(ax, x, y, config):
+        datas, p_type, plot_config = normalize_xy(x, y, config)
+        
+        if p_type == 'scatter' and isinstance(plot_config.get('marker', 'o'), (list, tuple, np.ndarray)):
+            markers = plot_config.pop('marker')
+            im = None
+            for m in np.unique(markers):
+                datas_marker = [
+                    [d for i, d in enumerate(datas_i) if markers[i] == m]
+                    for datas_i in datas
+                ]
+                config_marker   = {
+                    k : v if not isinstance(v, (list, tuple, np.ndarray)) else [
+                        v_i for i, v_i in enumerate(v) if markers[i] == m
+                    ] for k, v in plot_config.items()
+                }
+                im = getattr(ax, p_type)(* datas_marker, marker = m, ** config_marker)
+            return im
+        else:
+            if p_type != 'scatter': plot_config.pop('marker', None)
+            return getattr(ax, p_type)(* datas, ** plot_config)
+
     if not hasattr(plt, plot_type):
-        raise ValueError("plot_type doit être le nom d'une fonction d'affichage du module matplotlib.pyplot !\n  Reçu : {}\n  Acceptés : {}".format(plot_type, ('plot', 'bar', 'scatter', 'imshow', '...')))
+        raise ValueError("plot_type must be a valid matplotlib.pyplot method (such as plot, scatter, hist, imshow, ...)\n  Got : {}".format(plot_type))
     
     if y is None: x, y = None, x
     if new_fig and ax is None: fig = plt.figure(figsize = figsize)
@@ -117,26 +169,15 @@ def plot(x, y = None, *args, ax = None, figsize = None, xlim = None, ylim = None
         ax.xaxis.set_major_formatter(formatter)
         plt.gcf().autofmt_xdate()
     
-    if callable(y):
-        if x is None:
-            if xlim is None:
-                raise ValueError("When y is a callbable, you must specify x or xlim")
-            x0, x1 = xlim
-            x = np.linspace(x0, x1, int((x1 - x0) * 10))
-        y = y(x)
-    
     im = None
     if isinstance(y, dict):
         if len(y) > 0: kwargs.pop('color', None)
         for label, data in y.items():
-            im = getattr(ax, plot_type)(data, label = label, ** kwargs)
+            im = _plot_data(ax, x, data, {'label' : label, ** kwargs})
         
-        ax.legend(fontsize = legend_fontsize, ** legend_kwargs)
+        if with_legend: ax.legend(fontsize = legend_fontsize, ** legend_kwargs)
     else:
-        vals = (y,) if x is None else (x, y)
-        args = vals + args
-
-        im = getattr(ax, plot_type)(* args, ** kwargs)
+        im = _plot_data(ax, x, y, kwargs)
     
     if hlines is not None:
         if xlim is None:
@@ -191,9 +232,13 @@ def plot(x, y = None, *args, ax = None, figsize = None, xlim = None, ylim = None
     else:
         return ax, im
 
-def plot_multiple(*args, size = 3, x_size = None, y_size = None, ncols = 2, nrows = None,
+def plot_multiple(* args, size = 3, x_size = None, y_size = None, ncols = 2, nrows = None,
                   use_subplots = False, horizontal = False,
-                  by = None, corr = None, color_corr = None, color_order = None, # for pd.DataFrame grouping
+                  # for pd.DataFrame grouping
+                  by = None, corr = None,
+                  color_corr = None, color_order = None,
+                  shape_corr = None, shape_order = None,
+                  link_from_to = None, links = [],
                   
                   x = None, vlines = None, hlines = None, vlines_kwargs = {}, hlines_kwargs = {},
                   
@@ -228,13 +273,12 @@ def plot_multiple(*args, size = 3, x_size = None, y_size = None, ncols = 2, nrow
             if by is not None:
                 for value, datas_i in v.groupby(by):
                     datas_i.pop(by)
-                    name_i = '{} = {}'.format(by, value)
-                    datas.append((name_i, {'x' : datas_i.to_dict('list')}))
+                    datas.append(('{} = {}'.format(by, value), {'x' : datas_i.to_dict('list')}))
             elif corr is not None:
-                corr_colors = None
+                corr_config, corr_colors, corr_shapes = {}, None, None
                 if color_corr is not None:
                     if color_corr not in v.columns:
-                        logging.error('Color correlation color {} is not in data !'.format(color_corr))
+                        logging.error('Color correlation {} is not in data !'.format(color_corr))
                     else:
                         unique_values = list(v[color_corr].unique())
                         corr_colors = [
@@ -242,22 +286,71 @@ def plot_multiple(*args, size = 3, x_size = None, y_size = None, ncols = 2, nrow
                         ]
                         if color_order is not None:
                             if len(color_order) < len(unique_values):
-                                logging.info('Not enough colors : {} vs {}'.format(len(color_order), len(unique_values)))
+                                logging.warning('Not enough colors : {} vs {}'.format(len(color_order), len(unique_values)))
+                            elif isinstance(color_order, dict):
+                                corr_colors = [
+                                    color_order[corr_val_i] for corr_val_i in v[color_corr].values
+                                ]
                             else:
                                 corr_colors = [color_order[color_idx] for color_idx in corr_colors]
+                        corr_config['c'] = corr_colors
+                
+                if shape_corr is not None:
+                    if shape_corr not in v.columns:
+                        logging.error('Color correlation {} is not in data !'.format(shape_corr))
+                    else:
+                        unique_values = list(v[shape_corr].unique())
+                        corr_shapes = [
+                            unique_values.index(corr_val_i) for corr_val_i in v[shape_corr].values
+                        ]
+                        if shape_order is not None:
+                            if len(shape_order) < len(unique_values):
+                                logging.warning('Not enough colors : {} vs {}'.format(len(shape_order), len(unique_values)))
+                            elif isinstance(shape_order, dict):
+                                corr_shapes = [
+                                    shape_order.get(corr_val_i, 'o') for corr_val_i in v[shape_corr].values
+                                ]
+                            else:
+                                corr_shapes = [shape_order[shape_idx] for shape_idx in corr_shapes]
+                        corr_config['marker'] = corr_shapes
+                
+                link_from, link_to = (None, None) if not link_from_to else link_from_to
+                if link_from is not None:
+                    links = []
+                    for i, link_val in enumerate(v[link_from].values):
+                        links.append((i, np.where(v[link_to].values == link_val)[0]))
+                
+                corr_values = v[corr].values
                 for col in v.columns:
-                    if col == corr: continue
+                    if col in (corr, link_from, link_to): continue
                     try:
-                        v[col].unique()
-                        col_values = v[col].values
+                        unique_vals = v[col].unique()
+                        if any([isinstance(val_i, str) for val_i in unique_vals]):
+                            col_values = [str(val_i) for val_i in v[col].values]
+                        else:
+                            col_values = v[col].values
                     except TypeError:
                         col_values = [str(val_i) for val_i in v[col].values]
+                    
+                    col_data = {'x' : col_values, 'y' : corr_values}
+                    if links is not None:
+                        link_values = {}
+                        for idx1, links_to in links:
+                            links_to = list(links_to)
+                            for idx2 in links_to:
+                                link_values['link{}'.format(len(link_values))] = {
+                                    'x' : [col_values[idx1], col_values[idx2]],
+                                    'y' : [corr_values[idx1], corr_values[idx2]],
+                                    'plot_type' : 'plot', 'zorder' : 1,
+                                    'c' : corr_colors[idx1] if corr_colors else 0
+                                }
+                        col_data = {'x' : {
+                            'points' : {** col_data, 'zorder' : 2}, ** link_values
+                        }, 'with_legend' : False}
+                    
                     datas.append((col, {
-                        'x' : col_values, 'y' : v[corr].values, 'ylabel' : corr,
-                        'plot_type' : 'scatter'
+                        ** col_data, 'ylabel' : corr, 'plot_type' : 'scatter', ** corr_config
                     }))
-                    if corr_colors is not None:
-                        datas[-1][1]['c'] = corr_colors
             else:
                 for k, v_i in v.to_dict('list').items():
                     datas.append((k, v_i))

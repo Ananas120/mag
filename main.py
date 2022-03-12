@@ -1,3 +1,15 @@
+
+# Copyright (C) 2022 yui-mhcp project's author. All rights reserved.
+# Licenced under the Affero GPL v3 Licence (the "Licence").
+# you may not use this file except in compliance with the License.
+# See the "LICENCE" file at the root of the directory for the licence information.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import logging
 import subprocess
@@ -11,11 +23,11 @@ from models.model_utils import is_model_name, compare_models, remove_training_ch
 from loggers import TIME_LEVEL, add_handler, set_level
 
 
-TOKEN = ''
+TOKEN = None 
 
 _default_args = ['mode']
 
-set_level(TIME_LEVEL)
+set_level('info')
 
 def _get_config(* args, ** kwargs):
     args = [a for a in args if a not in kwargs]
@@ -23,7 +35,7 @@ def _get_config(* args, ** kwargs):
     config = parse_args(* _default_args + args, add_unknown = True)
     for a in _default_args: config.pop(a)
     
-    for k, v in config.items(): config.setdefault(k, v)
+    for k, v in kwargs.items(): config.setdefault(k, v)
     
     logging.info('Config : {}'.format(config))
     
@@ -44,7 +56,7 @@ def get_strategy(multi_gpu, assert_gpu = False):
     if not isinstance(multi_gpu, list): multi_gpu = [multi_gpu]
     tf.config.set_visible_devices([gpus[idx] for idx in multi_gpu], 'GPU')
     logging.info('# of visible GPU : {}'.format(len(tf.config.list_logical_devices('GPU'))))
-    return tf.distribute.MirroredStrategy()
+    return tf.distribute.MirroredStrategy() if len(multi_gpu) > 1 else tf.distribute.get_strategy()
 
 def build(** kwargs):
     config = _get_config('class', 'nom', multi_gpu = -1, ** kwargs)
@@ -62,9 +74,9 @@ def build(** kwargs):
         )
 
 def train(** kwargs):
-    config = _get_config('nom', 'dataset', multi_gpu = -1, dataset_dir = None, ** kwargs)
+    config = _get_config('nom', dataset = None, multi_gpu = -1, dataset_dir = None, ** kwargs)
     strategy = get_strategy(config.pop('multi_gpu'), assert_gpu = True)
-    
+
     ds_dir = config.pop('dataset_dir', None)
     if ds_dir: set_dataset_dir(ds_dir)
     dataset = get_dataset(config.pop('dataset'), ** config.pop('dataset_config', {}))
@@ -83,7 +95,7 @@ def train(** kwargs):
 
 def test(** kwargs):
     config      = _get_config(
-        'nom', 'dataset', multi_gpu = -1, dataset_dir = None, metrics = None, ** kwargs
+        'nom', dataset = None, multi_gpu = -1, dataset_dir = None, metrics = None, ** kwargs
     )
     strategy    = get_strategy(config.pop('multi_gpu'), assert_gpu = True)
     
@@ -104,6 +116,30 @@ def test(** kwargs):
     
     return hist
 
+def predict(** kwargs):
+    config      = _get_config(
+        'nom', dataset = None, multi_gpu = -1, dataset_dir = None, metrics = None, ** kwargs
+    )
+    strategy    = get_strategy(config.pop('multi_gpu'), assert_gpu = True)
+
+    ds_dir      = config.pop('dataset_dir', None)
+    if ds_dir: set_dataset_dir(ds_dir)
+    dataset     = get_dataset(
+        config.pop('dataset'), modes = ['valid'], ** config.pop('dataset_config', {})
+    )['valid']
+    
+    logging.info('Dataset length : {}'.format(len(dataset)))
+
+    with strategy.scope():
+        model   = get_pretrained(config.pop('nom'))
+        
+        if TOKEN: add_handler('telegram', token = TOKEN)
+
+        pred = model.predict(dataset, ** config)
+    
+    return pred
+
+
 def compare():
     pattern = _get_config(patterns = '').get('pattern', None)
 
@@ -111,7 +147,7 @@ def compare():
 
     infos = compare_models(names, True, True, epoch = 'best', add_training_config = True)
     
-    set_display_options()
+    set_display_options(columns = len(infos.columns), rows = len(infos))
     print(infos.sort_values('val_loss'))
 
 def experiments():
@@ -135,10 +171,12 @@ def run_unitests():
     
     run_tests(** config).assert_succeed()
 
+    
 _modes  = {
     'build' : build,
     'train' : train,
     'test'  : test,
+    'predict'   : predict,
     'compare'   : compare,
     'unitest'   : run_unitests,
     'clean'     : clean_checkpoints,

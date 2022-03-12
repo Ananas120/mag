@@ -1,3 +1,15 @@
+
+# Copyright (C) 2022 yui-mhcp project's author. All rights reserved.
+# Licenced under the Affero GPL v3 Licence (the "Licence").
+# you may not use this file except in compliance with the License.
+# See the "LICENCE" file at the root of the directory for the licence information.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import logging
 
 from utils import load_json, dump_json, parse_args
@@ -65,14 +77,15 @@ class HParams:
     def copy(self):
         return HParams(_prefix = self.__prefix, ** self)
     
-    def extract(self, values, pop = False):
+    def extract(self, values, pop = False, copy = True):
         """ Update self.config without adding new keys """
         keys = list(values.keys())
+        new_values = {}
         for k in keys:
             if k not in self: continue
             v = values.pop(k) if pop else values.get(k)
-            setattr(self, k, v)
-        return self
+            new_values[k] = v
+        return self(** new_values) if copy else self.update(new_values)
     
     def update(self, v):
         """ update self.config and add new keys if any """

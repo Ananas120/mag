@@ -3,7 +3,7 @@
 - **Author**    : Langlois Quentin
 - **Promotor**  : Dupont Pierre
 - **Academic year** : 2021-2022
-- **Overleaf link** : 
+- **Overleaf link** : [link](https://www.overleaf.com/read/cccygzfthhrk)
 
 The objective of this master thesis is to provide a new way to give question / contexts to limit the current constraints and allow to give more knowledge to the model.
 
@@ -26,7 +26,11 @@ The objective of this master thesis is to provide a new way to give question / c
 │   ├── qa/                 : main directory of Q&A models
 ├── pretrained_models/      : saving directory for pretrained models
 ├── unitest/                : custom unitest framework to test models' consistency
-└── utils/                  : utilities for data processing
+├── utils/                  : utilities for data processing
+├── experiments_mag.py      : main file to run multiple experiments (build / train / test / pred)
+├── main.py                 : main file to build or train or test or pred (single model)
+├── Makefile / Dockerfile-maggie / docker-compose-maggie.yml    : files to build / run bot container
+└── maggie.py               : code for the discord bot
 
 ```
 
@@ -35,12 +39,22 @@ See [README.original](README.original.md) for more information on the original p
 
 ## Installation and usage
 
+### Main installation 
+
 1. Clone this repository : `git clone https://github.com/Ananas120/mag.git`
 2. Go to the root of this repository : `cd mag`
 3. Install requirements : `pip install -r requirements.txt`
 4. Open an example notebook and follow the instructions !
 
-**For audio processing** : you should also install `ffmpeg` if you want to use some audio processing functions.
+### Bot installation
+
+You must have docker and docker-compose installed and NVIDIA drivers (to allow Docker to use GPU)
+
+1. Clone this repository : `git clone https://github.com/Ananas120/mag.git`
+2. Go to the root of this repository : `cd mag`
+3. Build container : `make build`
+4. Run container : `make`
+5. Stop the bot : `make down` (or CTRL + C after `make` if you are in the container's console)
 
 ## TO-DO list
 
@@ -48,16 +62,17 @@ See [README.original](README.original.md) for more information on the original p
 
 - [x] Make the TO-DO list.
 - [x] Make the `README` file.
-- [ ] Add references and citations.
+- [ ] Add references and citations (done in the report).
 - [x] Make a `BERT`-based span retriever model.
 - [x] Make a `BART`-based answer generator.
 - [x] Make a `Retriever Augmented Generator (RAG)`-style answer generator.
 - [ ] Write the final report
     - [x] Write the `introduction` part
     - [x] Write the `background` part
-    - [ ] Write the `experiments` part
-    - [ ] Write the `results` part
-    - [ ] Write the `conclusion` part
+    - [x] Write the `experiments` part
+    - [x] Write the `results` part
+    - [x] Write the `conclusion` part
+    - [ ] Send it to promotor and perform modifications proposed
 
 ### MAG experiments' TO-DO list
 
@@ -68,6 +83,10 @@ See [README.original](README.original.md) for more information on the original p
 - [x] Add the possibility to add a *context offset* for the contexts' `positional encoding index`
 - [x] Add the `batch`-merging mode for contexts (give multiple contexts during training).
 - [x] Add the `document`-mode for contexts (give an entire `wikipedia` paragraph at once).
+- [x] Allow to split context and pass it as separated sentences
+- [x] Perform Google / Bing search to get best results
+- [x] Perform Q&A based on a google-search result
+- [x] Create a Discord bot
 
 ## Answer Generator approaches
 
@@ -107,6 +126,8 @@ Once inputs have been encoded by the *N* first layers, I optionnally subsample t
 
 ## Results + parameters' explaination
 
+**Check the report for full analysis and results**
+
 ### Main parameters 
 
 Current parameters and their explaination : 
@@ -136,7 +157,11 @@ Each model has been trained and validated on `NaturalQuestions` and tested on `S
 
 Note that some parameters are not relevant as dependant of other parameters (`shuffle_size = 32 * batch_size`) while some others are memory-dependant (`batch_size`)
 
-![Parameters' impact on val loss (trained / val on Natural Questions and tested on SQUAD dev set)](images/val_loss.png)
+![Parameters' impact on Test F1](images/test_F1.png)
+
+![Top-k test F1](images/top-k.png)
+
+**Check the report for the legend**
 
 **Important note on validation / testing** : models have been evaluated the same way they have been trained, meaning that a `batch`-merging model has been validated with `batch_size * 2` paragraphs and a `doc`-based model has been validated with `max_negatives + 1` paragraphs (from the same wikipedia page). This is **not** the case during testing where all models have been tested with 1 paragraph (the relevant one) to have comparable results.
 
@@ -179,7 +204,7 @@ You can contact me via my student mail : quentin.langlois@student.uclouvain.be
 You can contact [me](https://github.com/yui-mhcp) at yui-mhcp@tutanota.com or on [discord](https://discord.com) at `yui#0732`
 
 The objective of these projects is to facilitate the development and deployment of useful application using Deep Learning for solving real-world problems and helping people. 
-For this purpose, all the code is under the [GNU GPL v3 licence](LICENCE)
+For this purpose, all the code is under the [Affero GPL (AGPL) v3 licence](LICENCE)
 
 Furthermore, you **cannot** use any of these projects for commercial purpose without my permission. You can use, modify, distribute and use any of my projects for production as long as you respect the terms of the [licence](LICENCE) and use it for non-commercial purposes (i.e. free applications / research). 
 

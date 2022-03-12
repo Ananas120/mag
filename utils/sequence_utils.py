@@ -1,3 +1,15 @@
+
+# Copyright (C) 2022 yui-mhcp project's author. All rights reserved.
+# Licenced under the Affero GPL v3 Licence (the "Licence").
+# you may not use this file except in compliance with the License.
+# See the "LICENCE" file at the root of the directory for the licence information.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import numpy as np
 import tensorflow as tf
 
@@ -71,3 +83,18 @@ def concat_sequences(seq1, seq2, pad_value):
             seq1 = tf.pad(seq1, padding, constant_values = pad_value)
     
     return tf.concat([seq1, seq2], axis = 0)
+
+def pad_to_multiple(seq, multiple, axis = 1, pad_after = True):
+    if axis < 0: axis = len(tf.shape(seq)) + axis
+    rest = tf.shape(seq)[axis] % multiple
+    if rest != 0:
+        pad = (0, multiple - rest) if pad_after else (multiple - rest, 0)
+        padding = [
+            (0, 0) for _ in range(axis)] + [pad] + [
+            (0, 0) for _ in range(axis + 1, len(tf.shape(seq)))
+        ]
+        
+        seq = tf.pad(seq, padding)
+        
+    return seq
+

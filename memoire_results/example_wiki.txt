@@ -1,0 +1,156 @@
+lengths (total : 3303 ) : [269 87 147 ... 95 138 226]  - shape : [20 425]
+Question : Where is malaga ?
+Wikipedia url : https://en.wikipedia.org/wiki/M%C3%A1laga {
+    "candidates": [
+        {
+            "text": "Spain",
+            "score": -0.146232008934021
+        },
+        {
+            "text": "in Spain",
+            "score": -3.524770498275757
+        },
+        {
+            "text": "Spain.",
+            "score": -4.099953651428223
+        },
+        {
+            "text": "M\u00c3\u00a1laga",
+            "score": -4.296871185302734
+        },
+        {
+            "text": "the Costa del Sol",
+            "score": -5.818670749664307
+        }
+    ]
+}
+lengths (total : 3228 ) : [137 131 161 ... 321 499 423]  - shape : [13 499]
+Question : what is the rank of india in economic growth
+Wikipedia url : https://en.wikipedia.org/wiki/Economy_of_India {
+    "candidates": [
+        {
+            "text": "the top-most economy",
+            "score": -0.7564894556999207
+        },
+        {
+            "text": "the top-most",
+            "score": -2.6596038341522217
+        },
+        {
+            "text": "top-most",
+            "score": -2.8467190265655518
+        },
+        {
+            "text": "the top-most economy, constituting 35 to 40% of the world GDP",
+            "score": -2.8770270347595215
+        },
+        {
+            "text": "102nd",
+            "score": -3.3608031272888184
+        }
+    ]
+}
+lengths (total : 410 ) : [328 41 41]  - shape : [3 328]
+Question : latest series of keeping up with the kardashians
+Wikipedia url : https://en.wikipedia.org/wiki/List_of_Keeping_Up_with_the_Kardashians_episodes {
+    "candidates": [
+        {
+            "text": "16",
+            "score": -1.6579605340957642
+        },
+        {
+            "text": "18",
+            "score": -2.350618839263916
+        },
+        {
+            "text": "Season 18",
+            "score": -2.457066059112549
+        },
+        {
+            "text": "Season 16",
+            "score": -2.628720760345459
+        },
+        {
+            "text": "Season 18 (2020)[edit]",
+            "score": -3.106884002685547
+        }
+    ]
+}
+lengths (total : 7750 ) : [353 277 163 ... 361 198 309]  - shape : [24 512]
+Question : where is tchernobyl
+Wikipedia url : https://en.wikipedia.org/wiki/Chernobyl_disaster {
+    "candidates": [
+        {
+            "text": "University of New Mexico",
+            "score": -1.1512513160705566
+        },
+        {
+            "text": "Ukraine",
+            "score": -1.4230419397354126
+        },
+        {
+            "text": "the University of New Mexico",
+            "score": -3.123419761657715
+        },
+        {
+            "text": "New Zealand",
+            "score": -3.419788360595703
+        },
+        {
+            "text": "Russia",
+            "score": -3.7565627098083496
+        }
+    ]
+}
+lengths (total : 997 ) : [200 318 99 209 171]  - shape : [5 318]
+Question : what is multi layer perceptron
+Wikipedia url : https://en.wikipedia.org/wiki/Multilayer_perceptron {
+    "candidates": [
+        {
+            "text": "a class of feedforward artificial neural network (ANN)",
+            "score": -1.6047061681747437
+        },
+        {
+            "text": "a class of feedforward artificial neural network (ANN) that has multiple layers",
+            "score": -2.873476028442383
+        },
+        {
+            "text": "a class of feedforward artificial neural network (ANN) which often allows solutions for extremely complex problems like approximation fitness",
+            "score": -2.970947504043579
+        },
+        {
+            "text": "A multilayer perceptron",
+            "score": -3.1595523357391357
+        },
+        {
+            "text": "a class of feedforward artificial neural network (ANN) which often allows solutions for extremely complex problems like fitness approximation",
+            "score": -3.617736339569092
+        }
+    ]
+}
+lengths (total : 1710 ) : [341 105 336 ... 191 172 124]  - shape : [8 341]
+Question : why the sky is blue
+Wikipedia url : https://en.wikipedia.org/wiki/Sky {
+    "candidates": [
+        {
+            "text": "air molecules scatter shorter wavelengths of sunlight",
+            "score": -0.9096249938011169
+        },
+        {
+            "text": "air molecules scatter shorter wavelengths of sunlight more than longer ones (redder light)",
+            "score": -2.0758414268493652
+        },
+        {
+            "text": "air molecules scatter shorter wavelengths of sunlight more than longer ones (red light)",
+            "score": -2.0912868976593018
+        },
+        {
+            "text": "air molecules scatter shorter wavelengths of sunlight and, along with the rain, suddenly increase",
+            "score": -3.025083541870117
+        },
+        {
+            "text": "air molecules scatter shorter wavelengths of sunlight more often than longer ones (red light)",
+            "score": -3.545470952987671
+        }
+    ]
+}

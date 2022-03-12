@@ -1,25 +1,36 @@
-import json
+
+# Copyright (C) 2022 yui-mhcp project's author. All rights reserved.
+# Licenced under the Affero GPL v3 Licence (the "Licence").
+# you may not use this file except in compliance with the License.
+# See the "LICENCE" file at the root of the directory for the licence information.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import numpy as np
 import tensorflow as tf
 
-from tensorflow.keras.models import model_from_json
-
-from hparams.hparams import HParams
-from utils.text import create_padding_mask
+from loggers import timer
+from utils.sequence_utils import pad_to_multiple
 from custom_layers import FasterEmbedding
-from custom_architectures.transformers_arch.transformer_arch import format_output
-from custom_architectures.transformers_arch.bart_arch import BartEncoder, BartDecoder, Bart, HParamsBartEncoder, HParamsBart, _shared_keys
+from custom_architectures.transformers_arch.transformer_arch import build_mask, format_output
+from custom_architectures.transformers_arch.bart_arch import Bart, BartEncoder, HParamsBart
+from custom_architectures.transformers_arch.text_transformer_arch import *
 
+_supported_subsamplings = ('select', 'mean', 'max', 'min', 'dense', 'conv', 'separable')
 
-HParamsMAGEncoder = HParamsBartEncoder(
-    repeat_pos_idx      = False,
-
+HParamsMAGEncoder = HParamsTextTransformerEncoder(
     subsample_at    = -1,
     subsample_after = True,
-    
     subsampling_step    = -1,
     subsampling_offset  = 1,
     subsampling_mode    = 'select',
     subsampling_drop_rate   = 0.,
+
+    repeat_pos_idx      = False,
     
     use_type_embedding      = False,
     random_training_type    = True,
@@ -30,35 +41,165 @@ HParamsMAG  = HParamsBart(
     ** HParamsMAGEncoder.get_config(add_prefix = 'encoder')
 )
 
-class MAGEncoder(BartEncoder):
-    def __init__(self, vocab_size, embedding_dim, name = None, ** kwargs):
-        super().__init__(vocab_size = vocab_size, embedding_dim = embedding_dim, name = name, ** kwargs)
+@timer
+def concat_qc(embeddings,
+              mask      = None,
+              merge_contexts    = False,
+              debug     = False,
+              ** kwargs
+             ):
+    question, contexts = embeddings[0], embeddings[1:]
+    q_mask, c_masks     = (mask[0], mask[1:]) if mask is not None else (None, None)
+    
+    c_lengths   = [tf.shape(c)[-2] for c in contexts]
+    contexts    = tf.concat(contexts, axis = 1) if len(contexts) > 1 else contexts[0]
+    if c_masks is not None:
+        if tf.shape(c_masks[0])[-2] > 1:
+            c_masks = tuple([tf.reduce_min(m, axis = -2, keepdims = True) for m in c_masks])
+        c_masks = tf.concat(c_masks, axis = -1) if len(c_masks) > 1 else c_masks[0]
+    if q_mask is not None and tf.shape(q_mask)[-2] > 1:
+        q_mask = tf.reduce_min(q_mask, axis = -2, keepdims = True)
+    
+    lengths     = [tf.shape(question)[1]] + c_lengths
+    
+    if debug:
+        tf.print("Sequence lengths :", lengths)
+        tf.print("Question shape :", tf.shape(question))
+        tf.print("Contexts shape :", tf.shape(contexts))
+        if c_masks is not None:
+            tf.print("Masks shape :", tf.shape(c_masks))
+    
+    n_doc_per_batch = 1
+    q_batch_size, c_batch_size = tf.shape(question)[0], tf.shape(contexts)[0]
+    
+    # flatten contexts from [B, n_doc, ctx_len, emb_dim] to [B, n_doc * ctx_len, emb_dim]
+    if len(tf.shape(contexts)) == 4:
+        if len(c_lengths) > 1:
+            raise NotImplementedError("When passing multiple document / batch at once, you cannot pass multiple contexts, please flatten everything !")
 
-        self.hparams = HParamsMAGEncoder.extract(kwargs)
-        self.hparams = self.hparams(vocab_size = vocab_size, embedding_dim = embedding_dim)
+        n_doc_per_batch = tf.shape(contexts)[1]
         
+        ctx_types = tf.repeat(tf.range(1, n_doc_per_batch + 1), tf.shape(contexts)[2])
+        
+        contexts    = tf.reshape(contexts, [c_batch_size, -1, tf.shape(contexts)[-1]])
+        if c_masks is not None:
+            c_masks = tf.reshape(c_masks, [c_batch_size, 1, 1, -1])
+
+        if debug:
+            tf.print("Contexts (after flattening) shape :", tf.shape(contexts))
+            if c_masks is not None:
+                tf.print("Masks (after flattening) shape :", tf.shape(c_masks))
+    elif len(c_lengths) > 1:
+        ctx_types   = tf.concat([
+            tf.fill([length], i + 1) for i, length in enumerate(c_lengths)
+        ], axis = -1)
+    else:
+        ctx_types   = tf.fill((tf.shape(contexts)[1], ), 1)
+    
+    # Merge contexts (if required)
+    if merge_contexts and q_batch_size > 1 and q_batch_size == c_batch_size:
+        if len(c_lengths) > 1:
+            raise NotImplementedError("When merging contexts, you can only pass 1 context / batch !")
+        
+        ctx_add_type = tf.repeat(tf.range(q_batch_size), tf.shape(contexts)[1])
+
+        contexts = tf.reshape(
+            tf.tile(contexts, [c_batch_size, 1, 1]), 
+            [c_batch_size, -1, tf.shape(contexts)[-1]]
+        )
+        if c_masks is not None:
+            c_masks = tf.reshape(
+                tf.tile(c_masks, [c_batch_size, 1, 1, 1]), 
+                [c_batch_size, 1, 1, -1]
+            )
+        
+        if debug:
+            tf.print("Contexts (after merging) shape :", tf.shape(contexts))
+            if c_masks is not None:
+                tf.print("Masks (after merging) shape :", tf.shape(c_masks))
+        
+        ctx_types = tf.tile(ctx_types, [q_batch_size]) + n_doc_per_batch * ctx_add_type
+    
+    types   = tf.concat([tf.fill([tf.shape(question)[1]], 0), ctx_types], axis = -1)
+    
+    memory  = tf.concat([question, contexts], axis = 1)
+    masks   = tf.concat([q_mask, c_masks], axis = -1) if q_mask is not None else None
+    types   = tf.tile(tf.expand_dims(types, axis = 0), [q_batch_size, 1])
+
+    return (memory, masks, types)
+
+class MAGEncoder(BartEncoder):
+    default_params  = HParamsMAGEncoder
+    _attr_to_set    = TextTransformerEncoder._attr_to_set + [
+        'subsample_at', 'subsample_after', 'subsampling_mode', 'subsampling_step',
+        'subsampling_offset', 'max_types', 'random_training_type', 'repeat_pos_idx'
+    ]
+    
+    def __init__(self, vocab_size, embedding_dim, name = None, ** kwargs):
+        super().__init__(
+            vocab_size = vocab_size, embedding_dim = embedding_dim, name = name, ** kwargs
+        )
+        
+        layer_idx = self.subsample_at
+        if layer_idx < 0: layer_idx = len(self._layers) + layer_idx
+        if self.subsample_after: layer_idx += 1
+        self.M = max(0, min(len(self._layers), layer_idx))
+        
+        self.subsampling_layer  = None
+        self.subsampling_drop_layer = tf.keras.layers.Dropout(
+            self.hparams.subsampling_drop_rate
+        ) if self.hparams.subsampling_drop_rate > 0 else None
         self.type_embedding_layer = None
+        
+        if self.subsampling_step > 1:
+            if self.subsampling_mode not in _supported_subsamplings:
+                raise ValueError("Unknown subsampling mode :\n  Got : {}\n  Accepted : {}".format(
+                    self.subsampling_mode, _supported_subsamplings
+                ))
+            
+            if self.subsampling_mode == 'conv':
+                self.subsampling_layer = tf.keras.layers.Conv1D(
+                    filters = self.embedding_dim, kernel_size = self.subsampling_step,
+                    strides = self.subsampling_step, padding = 'valid', name = 'subsampling_layer'
+                )
+            elif self.subsampling_mode == 'separable':
+                self.subsampling_layer = tf.keras.layers.SeparableConv1D(
+                    filters = self.embedding_dim, kernel_size = self.subsampling_step,
+                    strides = self.subsampling_step, padding = 'valid', name = 'subsampling_layer'
+                )
+            elif self.subsampling_mode == 'dense':
+                self.subsampling_layer = tf.keras.layers.Dense(
+                    units = self.embedding_dim, name = 'subsampling_layer'
+                )
+        
         if self.hparams.use_type_embedding:
             self.type_embedding_layer = FasterEmbedding(
-                self.hparams.max_types, self.embedding_dim, name = "type_embedding"
+                self.max_types, self.embedding_dim, name = "type_embedding"
             )
     
-    @property
-    def N(self):
-        layer_idx = self.hparams.subsample_at
-        if layer_idx < 0: layer_idx = len(self.encoder_layers) + layer_idx
-        if self.hparams.subsample_after: layer_idx += 1
-        return max(0, min(len(self.encoder_layers), layer_idx))
-    
+    def _maybe_init_subsampling_layer(self):
+        if self.subsampling_layer is None or self.subsampling_mode != 'dense': return
+        
+        w = np.zeros(self.subsampling_layer.weights[0].shape)
+        for i in range(self.embedding_dim):
+            w[i::self.embedding_dim, i] = 1
+        w /= self.subsampling_step
+        self.subsampling_layer.set_weights([w, np.zeros(self.subsampling_layer.weights[1].shape)])
+
+    def _build(self):
+        super()._build()
+        self._maybe_init_subsampling_layer()
+
     @property
     def embedding_layers(self):
-        return self.encoder_layers[: self.N]
+        return self._layers[: self.M]
     
     @property
     def memory_layers(self):
-        return self.encoder_layers[self.N :]
+        return self._layers[self.M :]
     
-    def _build(self):
+    @property
+    def dummy_inputs(self):
         batch_size, q_seq_len, c_seq_len = 2, 16, 32
         
         q_tokens    = tf.ones([batch_size, q_seq_len], dtype = tf.int32)
@@ -67,86 +208,84 @@ class MAGEncoder(BartEncoder):
         c_tokens    = tf.ones([batch_size, c_seq_len], dtype = tf.int32)
         c_length    = tf.fill([batch_size, 1], c_seq_len)
         
-        self([q_tokens, q_length, c_tokens, c_length], training = False)
-        self._maybe_init_subsampling_layer()
+        return [q_tokens, q_length, c_tokens, c_length]
     
-    def concat(self, embeddings, mask = None, training = False, merge_contexts = False, debug = False,
-               ** kwargs):
-        question, contexts = embeddings[0], embeddings[1:]
-        q_mask, c_masks     = (mask[0], mask[1:]) if mask is not None else (None, None)
+    @timer
+    def pad_to_multiple(self, output, mask = None):
+        output = pad_to_multiple(output, self.subsampling_step, axis = 1)
+        if mask is not None:
+            mask = pad_to_multiple(mask, self.subsampling_step, axis = -1)
         
-        c_lengths   = [tf.shape(c)[1] for c in contexts]
-        contexts    = tf.concat(contexts, axis = 1) if len(contexts) > 1 else contexts[0]
-        if c_masks is not None: c_masks = tf.concat(c_masks, axis = -1) if len(c_masks) > 1 else c_masks[0]
-        
-        lengths     = [tf.shape(question)[1]] + c_lengths
-        
-        if debug:
-            tf.print("Sequence lengths :", lengths)
-            tf.print("Question shape :", tf.shape(question))
-            tf.print("Contexts shape :", tf.shape(contexts))
-            tf.print("Masks shape :", tf.shape(c_masks) if c_masks is not None else None)
-        
-        if len(tf.shape(contexts)) == 4:
-            if len(c_lengths) > 1:
-                raise NotImplementedError("When passing multiple document / batch at once you cannot pass multiple contexts, please flatten everything !")
-            if merge_contexts:
-                raise NotImplementedError("You cannot pass multiple documents / batch and merge them !")
-            
-            types = tf.concat([
-                tf.fill([tf.shape(question)[1]], 0),
-                tf.repeat(tf.range(1, tf.shape(contexts)[1] + 1), tf.shape(contexts)[2])
-            ], axis = -1)
-            
-            contexts    = tf.reshape(contexts, [tf.shape(contexts)[0], -1, tf.shape(contexts)[-1]])
-            c_masks     = tf.reshape(c_masks, [tf.shape(c_masks)[0], 1, 1, -1])
+        return output, mask
 
-            if debug:
-                tf.print("Contexts (after flattening) shape :", tf.shape(contexts))
-                tf.print("Masks (after flattening) shape :", tf.shape(c_masks))
+    @timer
+    def subsample(self, output, mask = None, training = False):
+        if self.subsampling_step <= 1: return output, mask
+        
+        if self.subsampling_drop_layer is not None:
+            output = self.subsampling_drop_layer(output, training = training)
+        
+        if self.subsampling_mode == 'select':
+            indices = tf.range(self.subsampling_offset, tf.shape(output)[1], self.subsampling_step)
+            indices = tf.tile(tf.expand_dims(indices, axis = 0), [tf.shape(output)[0], 1])
+
+            output = tf.gather(output, indices, batch_dims = 1)
+
+            if mask is not None:
+                mask = tf.gather(tf.squeeze(mask, [1, 2]), indices, batch_dims = 1)
+                mask = tf.reshape(mask, [tf.shape(output)[0], 1, 1, -1])
+        elif self.subsampling_mode in ('conv', 'separabl'):
+            output = self.subsampling_layer(output, training = training)
             
-        elif merge_contexts and tf.shape(question)[0] > 1:
-            if len(c_lengths) > 1:
-                raise NotImplementedError("When merging contexts, you can only pass 1 context / batch !")
+
+            if mask is not None:
+                indices = tf.range(0, tf.shape(output)[1]) * self.subsampling_step
+                indices = tf.tile(tf.expand_dims(indices, axis = 0), [tf.shape(output)[0], 1])
+
+                mask = tf.gather(tf.squeeze(mask, [1, 2]), indices, batch_dims = 1)
+                mask = tf.reshape(mask, [tf.shape(output)[0], 1, 1, -1])
+        elif self.subsampling_mode == 'dense':
+            output, mask = self.pad_to_multiple(output, mask)
             
-            contexts = tf.reshape(
-                tf.tile(contexts, [tf.shape(contexts)[0], 1, 1]), 
-                [tf.shape(contexts)[0], -1, tf.shape(contexts)[-1]]
+            output = tf.reshape(
+                output, [tf.shape(output)[0], -1, self.subsampling_step * tf.shape(output)[-1]]
             )
-            c_masks = tf.reshape(
-                tf.tile(c_masks, [tf.shape(c_masks)[0], 1, 1, 1]), 
-                [tf.shape(c_masks)[0], 1, 1, -1]
-            )
+            output = self.subsampling_layer(output)
             
-            if debug:
-                tf.print("Contexts (after merging) shape :", tf.shape(contexts))
-                tf.print("Masks (after merging) shape :", tf.shape(c_masks))
-            
-            types = tf.concat([
-                tf.fill([tf.shape(question)[1]], 0),
-                tf.repeat(tf.range(1, tf.shape(question)[0] + 1), c_lengths[0])
-            ], axis = -1)
+            if mask is not None:
+                mask = tf.reshape(mask, [tf.shape(output)[0], 1, 1, -1, self.subsampling_step])
+                mask = tf.reduce_min(mask, axis = -1)
         else:
-            types   = tf.concat([
-                tf.fill([length], i) for i, length in enumerate(lengths)
-            ], axis = -1)
+            output, mask = self.pad_to_multiple(output, mask)
+            
+            output = tf.reshape(
+                output, [tf.shape(output)[0], -1, self.subsampling_step, tf.shape(output)[-1]]
+            )
+            
+            if mask is not None:
+                mask = tf.reshape(mask, [tf.shape(output)[0], 1, 1, -1, self.subsampling_step])
+                mask = tf.reduce_min(mask, axis = -1)
+            
+            if self.subsampling_mode == 'min':
+                output = tf.reduce_min(output, axis = 2)
+            elif self.subsampling_mode == 'max':
+                output = tf.reduce_max(output, axis = 2)
+            else:
+                output = tf.reduce_mean(output, axis = 2)
         
-        memory  = tf.concat([question, contexts], axis = 1)
-        masks   = tf.concat([q_mask, c_masks], axis = -1) #if q_mask is not None else None
-        types   = tf.tile(tf.expand_dims(types, axis = 0), [tf.shape(question)[0], 1])
+        return output, mask
 
-        return (memory, masks, types)
-    
+    @timer
     def embed_types(self, memory, types, training = False, debug = False, ** kwargs):
         if self.type_embedding_layer is None: return memory, types
         
-        if self.hparams.max_types == 2:
+        if self.max_types == 2:
             types = tf.cast(types > 0, tf.int32)
-        elif self.hparams.random_training_type and training and tf.reduce_max(types) < self.hparams.max_types:
+        elif self.random_training_type and training and tf.reduce_max(types) < self.max_types:
             random_offset = tf.random.uniform(
                 (tf.shape(types)[0], 1),
                 minval  = 0,
-                maxval  = self.hparams.max_types - tf.reduce_max(types),
+                maxval  = self.max_types - tf.reduce_max(types),
                 dtype   = tf.int32
             )
             types = types + (random_offset * tf.cast(types > 0, tf.int32))
@@ -158,91 +297,251 @@ class MAGEncoder(BartEncoder):
         
         return memory, types
     
-    def embed(self, text, text_lengths = None, mask = None, training = False, positional_offset = -1,
-              force_not_subsampling = False, debug = False, ** kwargs):
-        if isinstance(text, (list, tuple)):
-            assert len(text) % 2 == 0
-
-            if len(text) > 2:
-                if debug: tf.print("Force not subsampling :", force_not_subsampling)
-                if not isinstance(force_not_subsampling, (list, tuple)):
-                    force_not_subsampling = [force_not_subsampling] * (len(text) // 2)
-                assert len(force_not_subsampling) == len(text) // 2
-                
-                embeddings, attn, states, masks = [], [], [], []
-                for i in range(0, len(text), 2):
-                    embedding_i, attn_i, states_i, mask_i = self.embed(
-                        text[i], text[i+1], training = training, positional_offset = positional_offset,
-                        force_not_subsampling = force_not_subsampling[i // 2], debug = debug
-                    )
-                    embeddings.append(embedding_i)
-                    attn.append(attn_i)
-                    states.append(states_i)
-                    masks.append(mask_i)
-                
-                return embeddings, attn, states, masks
+    @timer
+    def embed(self,
+              inputs,
+              input_length  = None,
+              token_types   = None,
+              position_ids  = None,
+              
+              mask  = None,
+              training  = False,
+              padding_mask  = None,
+              look_ahead_mask   = None,
+              
+              positional_offset = -1,
+              force_not_subsampling = False,
+              
+              return_state       = None,
+              return_attention   = None,
+              return_hidden_states   = None,
+              return_mask        = None,
+              as_dict    = False,
+              
+              debug = False,
+              ** kwargs
+             ):
+        if return_state is None:            return_state = self.return_state
+        if return_attention is None:        return_attention = self.return_attention
+        if return_hidden_states is None:    return_hidden_states = self.return_hidden_states
+        if return_mask is None:             return_mask = self.return_mask
+        
+        if isinstance(inputs, (list, tuple)):
+            assert len(inputs) % 2 == 0
             
-            text, text_lengths = text
-        
+            if len(inputs) > 2:
+                if not isinstance(force_not_subsampling, (list, tuple)):
+                    force_not_subsampling = [force_not_subsampling] * (len(inputs) // 2)
+                if not isinstance(positional_offset, (list, tuple)):
+                    positional_offset = [positional_offset] * (len(inputs) // 2)
+                
+                assert len(force_not_subsampling) == len(inputs) // 2, '{} vs {}'.format(len(force_not_subsampling), len(inputs))
+                assert len(positional_offset) == len(inputs) // 2, '{} vs {}'.format(len(positional_offset), len(inputs))
+                
+                embeddings      = []
+                states          = () if return_state else None
+                attn_weights    = () if return_attention else None
+                hidden_states   = () if return_hidden_states else None
+                masks           = () if return_mask else None
+                
+                for i in range(0, len(inputs), 2):
+                    outputs_i = self.embed(
+                        inputs[i],
+                        input_length    = inputs[i+1],
+                        token_types     = token_types[i // 2] if token_types is not None else None,
+                        position_ids    = position_ids[i // 2] if position_ids is not None else None,
+                        training    = training,
+                        positional_offset   = positional_offset[i // 2],
+                        force_not_subsampling   = force_not_subsampling[i // 2],
+                        
+                        return_state    = return_state,
+                        return_attention    = return_attention,
+                        return_hidden_states    = return_hidden_states,
+                        return_mask = return_mask,
+                        as_dict = True,
+                        
+                        debug   = debug,
+                        ** kwargs
+                    )
+                    embeddings.append(outputs_i.output)
+                    if return_state:
+                        states = states + (outputs_i.state, )
+                    if return_attention:
+                        attn_weights = attn_weights + (outputs_i.attention_weights, )
+                    if return_hidden_states:
+                        hidden_states = hidden_states + (outputs_i.hidden_states, )
+                    if return_mask:
+                        masks = masks + (outputs_i.mask, )
+                
+                return format_output(
+                    output  = embeddings,
+                    state   = states,
+                    attn_weights    = attn_weights,
+                    hidden_states   = hidden_states,
+                    mask        = masks,
+                    
+                    return_state    = return_state,
+                    return_attention    = return_attention,
+                    return_hidden_states    = return_hidden_states,
+                    return_mask = return_mask,
+                    as_dict = as_dict
+                )
+            
+            text, input_length = inputs
+        else:
+            text = inputs
+
         if debug:
-            tf.print("Input tokens shape :", tf.shape(text), "-", tf.shape(text_lengths))
-        
-        attn_outputs, states_outputs = {}, {}
+            tf.print("Input tokens shape :", tf.shape(text), "-", input_length)
         
         batch_size = tf.shape(text)[0]
         n_doc_per_batch = -1
         if len(tf.shape(text)) == 3:
             n_doc_per_batch = tf.shape(text)[1]
             text            = tf.reshape(text, [-1, tf.shape(text)[-1]])
-            text_lengths    = tf.reshape(text_lengths, [-1])
+            input_length    = tf.reshape(input_length, [-1])
             if debug:
                 tf.print("Input tokens reshaped shape :", tf.shape(text))
         
+        states              = () if return_state else None
+        attention_weights   = {} if return_attention else None
+        hidden_states       = {} if return_hidden_states else None
+        
         if mask is None:
-            mask = create_padding_mask(text, seq_len = text_lengths)
-
-        embedded = self.embed_tokens(
-            text, training = training, positional_offset = positional_offset,
-            repeat_position = -1 if force_not_subsampling or not self.hparams.repeat_pos_idx else self.hparams.subsampling_step
+            mask = build_mask(
+                text, self.use_causal_attention, input_length = input_length,
+                look_ahead_mask = look_ahead_mask, padding_mask = padding_mask
+            )
+        
+        embedded = self.embeddings(
+            text,
+            input_length    = input_length,
+            
+            repeat_position = self.repeat_pos_idx,
+            positional_offset   = positional_offset,
+            
+            training    = training,
+            mask    = mask,
+            debug   = debug,
+            ** kwargs
         )
         
         output = embedded
         for i, layer in enumerate(self.embedding_layers):
-            output, attn_weights = layer(
-                output, mask = mask, training = training, return_attention = True
+            output, state, attn_weights = layer(
+                output,
+                input_length    = input_length,
+                training    = training,
+                mask    = mask,
+                return_attention    = True,
+                return_state        = True
             )
-            attn_outputs['emb_attn_{}'.format(layer.name)] = attn_weights
-            states_outputs['emb_attn_{}'.format(layer.name)] = output
+            if return_state:
+                states  = states + (state, )
+            
+            if return_attention:
+                if not isinstance(attn_weights, tuple):
+                    attention_weights['attn_{}'.format(layer.name)] = attn_weights
+                else:
+                    attention_weights['attn_{}'.format(layer.name)] = attn_weights[0]
+                    attention_weights['enc_attn_{}'.format(layer.name)] = attn_weights[1]
+            
+            if return_hidden_states:
+                hidden_states['state_{}'.format(layer.name)] = output
         
         if not force_not_subsampling:
             output, mask = self.subsample(output, mask = mask, training = training)
+
+            if debug:
+                tf.print("Output subsampled shape :", tf.shape(output))
         
         if n_doc_per_batch != -1:
-            output  = tf.reshape(output, [batch_size, n_doc_per_batch, tf.shape(output)[1], tf.shape(output)[-1]])
+            output  = tf.reshape(
+                output, [batch_size, n_doc_per_batch, tf.shape(output)[1], tf.shape(output)[-1]]
+            )
             mask    = tf.reshape(mask,   [batch_size, n_doc_per_batch, 1, 1, tf.shape(mask)[-1]])
-        
-        if debug:
-            tf.print("Output subsampled shape :", tf.shape(output))
-        
-        return output, attn_outputs, states_outputs, mask
-    
-    def process_memory(self, embeddings, mask = None, training = False, ** kwargs):
-        attn_outputs, states_outputs = {}, {}
 
-        memory, mask, types = self.concat(embeddings, mask = mask, training = training, ** kwargs)
+            if debug:
+                tf.print("Output reshaped shape :", tf.shape(output))
+        
+        return format_output(
+            output  = output,
+            state   = states,
+            attn_weights    = attention_weights,
+            hidden_states   = hidden_states,
+            mask        = mask,
+            
+            return_state    = return_state,
+            return_attention    = return_attention,
+            return_hidden_states    = return_hidden_states,
+            return_mask = return_mask,
+            as_dict = as_dict
+        )
+    
+    @timer
+    def process_memory(self,
+                       embeddings,
+                       mask = None,
+                       training = False,
+                       
+                       return_state       = None,
+                       return_attention   = None,
+                       return_hidden_states   = None,
+                       return_mask        = None,
+                       as_dict    = False,
+              
+                       ** kwargs
+                      ):
+        if return_state is None:            return_state = self.return_state
+        if return_attention is None:        return_attention = self.return_attention
+        if return_hidden_states is None:    return_hidden_states = self.return_hidden_states
+        if return_mask is None:             return_mask = self.return_mask
+        
+        states              = () if return_state else None
+        attention_weights   = {} if return_attention else None
+        hidden_states       = {} if return_hidden_states else None
+
+        memory, mask, types = concat_qc(embeddings, mask = mask, training = training, ** kwargs)
         
         memory, types = self.embed_types(memory, types, training = training, ** kwargs)
         
         output = memory
         for i, layer in enumerate(self.memory_layers):
-            output, attn_weights = layer(
-                output, mask = mask, training = training, return_attention = True
+            output, state, attn_weights = layer(
+                output,
+                training    = training,
+                padding_mask    = mask,
+                return_attention    = True,
+                return_state        = True
             )
-            attn_outputs['memory_attn_{}'.format(layer.name)] = attn_weights
-            states_outputs['emb_attn_{}'.format(layer.name)] = output
-
-        return output, attn_outputs, states_outputs, types, mask
+            if return_state:
+                states  = states + (state, )
+            
+            if return_attention:
+                if not isinstance(attn_weights, tuple):
+                    attention_weights['memory_attn_{}'.format(layer.name)] = attn_weights
+                else:
+                    attention_weights['memory_attn_{}'.format(layer.name)] = attn_weights[0]
+                    attention_weights['memory_enc_attn_{}'.format(layer.name)] = attn_weights[1]
+            
+            if return_hidden_states:
+                hidden_states['state_{}'.format(layer.name)] = output
+        
+        return format_output(
+            output  = output,
+            state   = states,
+            attn_weights    = attention_weights,
+            hidden_states   = hidden_states,
+            mask        = mask,
+            
+            return_state    = return_state,
+            return_attention    = return_attention,
+            return_hidden_states    = return_hidden_states,
+            return_mask = return_mask,
+            as_dict = as_dict
+        )
     
+    @timer
     def call(self,
              inputs,
              mask       = None,
@@ -251,59 +550,68 @@ class MAGEncoder(BartEncoder):
              merge_contexts     = False,
              positional_offset  = -1, 
              
+             return_state       = None,
              return_attention   = None,
-             return_states  = None,
-             return_mask    = None,
+             return_hidden_states   = None,
+             return_mask        = None,
+             as_dict    = False,
              
              ** kwargs
             ):
-        embeddings, attn, states, masks = self.embed(
-            inputs, mask = mask, training = training, positional_offset = positional_offset, ** kwargs
+        if return_state is None:            return_state = self.return_state
+        if return_attention is None:        return_attention = self.return_attention
+        if return_hidden_states is None:    return_hidden_states = self.return_hidden_states
+        if return_mask is None:             return_mask = self.return_mask
+
+        memory_outputs = self.embed(
+            inputs,
+            mask    = mask,
+            training    = training,
+            positional_offset   = positional_offset,
+            
+            return_state    = return_state,
+            return_attention    = return_attention,
+            return_hidden_states    = return_hidden_states,
+            return_mask = True,
+            as_dict = True,
+            ** kwargs
+        )
+        embeddings, masks = memory_outputs.output, memory_outputs.mask
+        
+        outputs = self.process_memory(
+            embeddings,
+            mask    = masks,
+            training    = training,
+            merge_contexts  = merge_contexts,
+            
+            return_state    = return_state,
+            return_attention    = return_attention,
+            return_hidden_states    = return_hidden_states,
+            return_mask = return_mask,
+            as_dict = True,
+            ** kwargs
         )
         
-        output, memory_attn, memory_states, types, memory_mask = self.process_memory(
-            embeddings, mask = masks, training = training, merge_contexts = merge_contexts, ** kwargs
+        return format_output(
+            outputs.output,
+            state   = (memory_outputs.state, outputs.state),
+            attn_weights    = (memory_outputs.attention_weights, outputs.attention_weights),
+            hidden_states   = (memory_outputs.hidden_states, outputs.hidden_states),
+            mask    = outputs.mask,
+            
+            return_state    = return_state,
+            return_attention    = return_attention,
+            return_hidden_states    = return_hidden_states,
+            return_mask = return_mask,
+            as_dict = as_dict
         )
-        
-        out = self.encoder.format_output(
-            output, attn_weights = attn + [memory_attn], mask = memory_mask, states = states + [memory_states],
-            return_attention = return_attention, return_mask = return_mask, return_states = return_states
-        )
-        return (out, types) if not isinstance(out, tuple) else out + (types, )
     
 class MAG(Bart):
-    def __init__(self, vocab_size, embedding_dim, max_input_length,
-                 sos_token = None, eos_token = None, name = None, ** kwargs):
-        super(Bart, self).__init__(name = name)
-        
-        tokens = {'sos_token' : sos_token, 'eos_token' : eos_token}
-        if sos_token is not None:
-            tokens.update({'decoder_sos_token' : sos_token, 'decoder_eos_token' : eos_token})
-        
-        kwargs.update({
-            'embedding_dim' : embedding_dim, 'vocab_size' : vocab_size, 'max_input_length' : max_input_length
-        })
-        self.hparams = HParamsMAG.extract(kwargs)
-        self.hparams = self.hparams(
-            encoder_name    = 'encoder',
-            decoder_name    = 'decoder',
-            ** {'encoder_{}'.format(k) : self.hparams[k] for k in _shared_keys},
-            ** {'decoder_{}'.format(k) : self.hparams[k] for k in _shared_keys},
-            ** tokens
-        )
-        
-        self.shared_embedding = FasterEmbedding(vocab_size, embedding_dim, name = "token_embedding")
-        
-        self.encoder    = MAGEncoder(
-            token_embedding = self.shared_embedding,
-            ** self.hparams.get_config(prefix = 'encoder')
-        )
-        self.decoder    = BartDecoder(
-            token_embedding = self.shared_embedding,
-            ** self.hparams.get_config(prefix = 'decoder')
-        )
+    encoder_class   = MAGEncoder
+    default_params  = HParamsMAG
     
-    def _build(self):
+    @property
+    def dummy_inputs(self):
         batch_size, q_in_seq_len, c_in_seq_len, out_seq_len = 2, 16, 32, 8
         
         q_tokens    = tf.ones([batch_size, q_in_seq_len], dtype = tf.int32)
@@ -315,124 +623,11 @@ class MAG(Bart):
         text = tf.ones([batch_size, out_seq_len], dtype = tf.int32)
         text_length = tf.fill([batch_size, 1], out_seq_len)
         
-        self([q_tokens, q_length, c_tokens, c_length, text, text_length], training = False)
-        self.encoder._maybe_init_subsampling_layer()
-
-    def encode(self, inputs, mask = None, training = False, ** kwargs):
-        return self.encoder(inputs, mask = mask, training = training, ** kwargs)
+        return [q_tokens, q_length, c_tokens, c_length, text, text_length]
     
-    def decode(self,
-               encoder_out,
-               decoder_inputs   = None,
-               encoder_out_types    = None,
-               
-               decoder_mask = None,
-               enc_padding_mask = None,
-               
-               training = False,
-               
-               ** kwargs
-              ):
-        if decoder_inputs is not None:
-            output = self.decoder(
-                [encoder_out, decoder_inputs[0], decoder_inputs[1]],
-                mask    = decoder_mask,
-                training    = training,
-                enc_padding_mask    = enc_padding_mask,
-                ** kwargs
-            )
-        else:
-            output = self.decoder.infer(
-                encoder_out,
-                training    = training,
-                enc_padding_mask    = enc_padding_mask,
-                ** kwargs
-            )
-        
-        return output
-
-    def call(self,
-             inputs,
-             training   = False,
-             encoder_mask   = None,
-             decoder_mask   = None,
-             
-             return_attention   = None,
-             return_states      = None,
-             return_mask        = None,
-             return_logits      = None,
-             
-             ** kwargs
-            ):
-        encoder_inputs, decoder_inputs = inputs[: -2], inputs[-2 :]
-        
-        encoder_out, encoder_attn, encoder_states, encoder_mask, types = self.encode(
-            encoder_inputs, mask = encoder_mask, training = training, 
-            return_attention = True, return_mask = True, return_states = True, ** kwargs
-        )
-        
-        output, logits, decoder_attn, decoder_states, decoder_mask = self.decode(
-            encoder_out,
-            decoder_inputs  = decoder_inputs,
-            encoder_out_types   = types,
-            
-            training    = training,
-            decoder_mask    = decoder_mask,
-            enc_padding_mask    = encoder_mask,
-            
-            return_attention    = True,
-            return_states       = True,
-            return_mask         = True,
-            return_logits       = True,
-            
-            ** kwargs
-        )
-        
-        return self.decoder.decoder.format_output(
-            output, logits  = logits,                            return_logits    = return_logits,
-            attn_weights    = (encoder_attn, decoder_attn),     return_attention = return_attention,
-            states          = (encoder_states, decoder_states), return_states    = return_states,
-            mask            = (encoder_mask, decoder_mask),     return_mask      = return_mask
-        )
-
-    def infer(self,
-              inputs,
-              training = False,
-              encoder_mask = None, 
-                
-              return_attention   = None,
-              return_states      = None,
-              return_mask        = None,
-              return_logits      = None,
-              ** kwargs
-             ):
-        encoder_out, encoder_attn, encoder_states, encoder_mask, types = self.encode(
-            inputs, mask = encoder_mask, training = training, 
-            return_attention = True, return_mask = True, return_states = True, ** kwargs
-        )
-        
-        decoder_out, decoder_attn = self.decode(
-            encoder_out,
-            decoder_inputs  = None,
-            encoder_out_types   = types,
-            
-            training    = training,
-            enc_padding_mask    = encoder_mask,
-            
-            return_attention    = True,
-            return_states       = True,
-            return_mask         = True,
-            return_logits       = True,
-            
-            ** kwargs
-        )
-        
-        return self.decoder.decoder.format_output(
-            output, logits  = logits,                            return_logits    = return_logits,
-            attn_weights    = (encoder_attn, decoder_attn),     return_attention = return_attention,
-            states          = (encoder_states, decoder_states), return_states    = return_states,
-            mask            = (encoder_mask, decoder_mask),     return_mask      = return_mask
-        )
+    def _build(self):
+        super()._build()
+        self.encoder._maybe_init_subsampling_layer()
 
 custom_objects  = {
     'MAG'   : MAG

@@ -1,3 +1,15 @@
+
+# Copyright (C) 2022 Langlois Quentin. All rights reserved.
+# Licenced under the Affero GPL v3 Licence (the "Licence").
+# you may not use this file except in compliance with the License.
+# See the "LICENCE" file at the root of the directory for the licence information.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -7,10 +19,10 @@ import custom_architectures.transformers_arch.mag_arch as mag_arch
 from loggers import timer
 from utils.distance import knn
 from models.model_utils import get_model_config
-from models.qa.base_qa_generator import BaseQAGenerator
+from models.qa.base_generator import BaseGenerator
 from models.qa.context_retriever import ContextRetriever
 
-class RAG(BaseQAGenerator):
+class RAG(BaseGenerator):
     def __init__(self,
                  context_retriever_name,
                  

@@ -1,0 +1,470 @@
+==========
+Predictions for index 98
+==========
+Model m5_nq_coqa_newsqa and pred pred (3662 preds, 105 failed) :
+Context : Keeping Up with the Kardashians is an American reality television series that has aired on E! since October 14, 2007. The series has aired thirteen seasons, and focuses on the personal and professional lives of the Kardashian–Jenner family. Its premise was originated with Ryan Seacrest, who additionally serves as an executive producer. The series focuses on sisters Kourtney, Kim, and Khloé Kardashian.
+
+It additionally places emphasis on their brother Rob Kardashian, their mother Kris Jenner, their step-parent Caitlyn Jenner, their half-sisters Kendall and Kylie Jenner, and Kourtney's now ex-boyfriend, Scott Disick. Khloé's ex-husband Lamar Odom developed a major position as part of the supporting cast in the fourth season, though he was not a regular cast member in following seasons, and rarely appeared in season eight while attempting to fix his marriage with Khloé. In seasons eight and nine, Caitlyn's children Brody and Brandon, and Brandon's wife, Leah became recurring cast members.
+
+Keeping Up with the Kardashians is often criticized for emphasizing the "famous for being famous" concept and appearing to fabricate aspects of its storyline. The series has produced the spin-offs Kourtney and Kim Take Miami, Kourtney and Kim Take New York, Khloé & Lamar, Kourtney and Khloé Take The Hamptons, Dash Dolls, I Am Cait, Kocktails with Khloé, Revenge Body with Khloé Kardashian, Rob & Chyna, and Life of Kylie.
+
+As of January 21, 2018 (2018-01-21), 210 original episodes of Keeping Up with the Kardashians have aired concluding the fourteen seasons.
+Question : latest series of keeping up with the kardashians
+Target : ['14']
+
+Inference :
+  #0 (-0.484) : Life of Kylie
+  #1 (-2.209) : Revenge Body with KhloÃ© Kardashian
+  #2 (-3.111) : life of Kylie
+  #3 (-3.835) : Revenge Body
+  #4 (-4.565) : Rob & Chyna
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_1_4_mean and pred pred (3662 preds, 147 failed) :
+Inference :
+  #0 (-1.218) : 2018
+  #1 (-1.363) : season eight
+  #2 (-2.328) : Season eight
+  #3 (-2.989) : 2018-01-21
+  #4 (-3.352) : (2018-01-21)
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_2_2_dense and pred pred (3662 preds, 131 failed) :
+Inference :
+  #0 (-0.976) : 2018
+  #1 (-2.846) : Life of Kylie
+  #2 (-3.821) : Â 2018
+  #3 (-3.865) : 9
+  #4 (-3.952) : KhlÃ©
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_3_2_dense and pred pred (3662 preds, 168 failed) :
+Inference :
+  #0 (-0.274) : 2018
+  #1 (-3.715) : 2018â2019
+  #2 (-4.177) : JanuaryÂ 21, 2018Â (2018-01-21)
+  #3 (-4.348) : 2019
+  #4 (-4.564) : JanuaryÂ 21, 2018
+
+
+==========
+Predictions for index 196
+==========
+Model m5_nq_coqa_newsqa and pred pred (3662 preds, 105 failed) :
+Context : The second season of the science fiction television series The X-Files commenced airing on the Fox network in the United States on September 16, 1994, concluded on the same channel on May 19, 1995, after airing all 25 episodes. The series follows Federal Bureau of Investigation special agents Fox Mulder and Dana Scully, portrayed by David Duchovny and Gillian Anderson respectively, who investigate paranormal or supernatural cases, known as X-Files by the FBI.
+
+The second season of The X-Files takes place after the closure of the department following the events of the first season finale. In addition to stand-alone "Monster-of-the-Week" episodes, several episodes also furthered the alien conspiracy mythology that had begun to form. Season two introduced several recurring characters—X (Steven Williams), an informant to Mulder; Alex Krycek (Nicholas Lea), Mulder's partner-turned-enemy; and the Alien Bounty Hunter (Brian Thompson), a shape-shifting assassin.
+
+The storylines were widely affected by the pregnancy of actress Gillian Anderson; it was decided that Scully would be kidnapped and abducted by aliens, explaining her absence and allowing her to appear comatose two episodes later, which ultimately added more intricacies to the mythology. The season earned seven Primetime Emmy Award nominations. The premiere "Little Green Men", debuted with a Nielsen household rating of 10.3 and was viewed by 9.8 million households, marking a noticeable increase in viewership since the previous year. The series rose from number 111 to number 63 for the 1994–95 television year. In addition, the show's second season has generally received positive reviews from television critics.
+Question : when does scully come back in season 2
+Target : ['8']
+
+Inference :
+  #0 (-0.590) : two episodes later
+  #1 (-1.976) : two episodes
+  #2 (-3.429) : Two episodes later
+  #3 (-4.241) : unknown
+  #4 (-4.268) : two
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_1_4_mean and pred pred (3662 preds, 147 failed) :
+Inference :
+  #0 (-1.094) : two episodes later
+  #1 (-2.449) : unknown
+  #2 (-2.641) : after the closure of the department following the events of the first season finale
+  #3 (-3.111) : two episodes
+  #4 (-3.262) : two episodes later,
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_2_2_dense and pred pred (3662 preds, 131 failed) :
+Inference :
+  #0 (-0.883) : after the events of the first season finale
+  #1 (-1.124) : two episodes later
+  #2 (-3.189) : two episodes
+  #3 (-3.415) : after the first season finale
+  #4 (-3.861) : two later episodes
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_3_2_dense and pred pred (3662 preds, 168 failed) :
+Inference :
+  #0 (-2.138) : second season
+  #1 (-2.178) : after the closure of the department following the events of the first season finale
+  #2 (-3.128) : September 16, 1994
+  #3 (-3.269) : after the closure of the department following the events of the first season premiere
+  #4 (-3.622) : after the closure of the department
+
+
+==========
+Predictions for index 246
+==========
+Model m5_nq_coqa_newsqa and pred pred (3662 preds, 105 failed) :
+Context : By early 1921 it became apparent to the Bolsheviks that forced requisitioning of grain had resulted in low agricultural production and widespread opposition. As a result, the decision was made by Lenin and the Politburo to try an alternative approach.[33] The so-called New Economic Policy (NEP) was approved at the 10th Congress of the Russian Communist Party (Bolsheviks)[34]
+
+Everything except "the commanding heights", as Lenin put it, of the economy would be privatized. "The commanding heights" included foreign trade, heavy industry, communication and transport among others.[33] In practice this limited the private sector to artisan and agricultural production/trade.[35] The NEP encountered strong resistance within the Bolshevik party. Lenin had to persuade communist skeptics that "state capitalism" was a necessary step in achieving communism, while he himself harbored suspicions that the policy could be abused by private businessmen ("NEPmen").[36]
+
+As novelist Andrei Platonov, among others, noted, the improvements were immediate. Rationing cards and queues, which had become hallmarks of war communism, had disappeared. However, due to prolonged war, low harvests, and several natural disasters the Soviet economy was still in trouble, particularly its agricultural sector. In 1921 widespread famine broke out in the Volga-Ural region. The Soviet government changed its previous course and allowed international relief to come in from abroad, and established a special committee chaired by prominent communists and non-communists alike. Despite this, an estimated five million people died in the famine.[37]
+Question : what type of economic system was utilized in the soviet union
+Target : ['communism']
+
+Inference :
+  #0 (-1.216) : state capitalism
+  #1 (-2.200) : New Economic Policy (NEP)
+  #2 (-2.209) : New Economic Policy
+  #3 (-3.025) : Soviet economy
+  #4 (-3.122) : capitalism
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_1_4_mean and pred pred (3662 preds, 147 failed) :
+Inference :
+  #0 (-0.292) : state capitalism
+  #1 (-2.399) : New Economic Policy (NEP)
+  #2 (-2.921) : New Economic Policy
+  #3 (-4.248) : capitalism
+  #4 (-4.445) : State capitalism
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_2_2_dense and pred pred (3662 preds, 131 failed) :
+Inference :
+  #0 (-1.403) : capitalism
+  #1 (-1.526) : New Economic Policy
+  #2 (-1.676) : state capitalism
+  #3 (-2.651) : New Economic Policy (NEP)
+  #4 (-3.213) : a state capitalism
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_3_2_dense and pred pred (3662 preds, 168 failed) :
+Inference :
+  #0 (-1.286) : New Economic Policy
+  #1 (-1.419) : "state capitalism"
+  #2 (-2.792) : state capitalism
+  #3 (-3.146) : low agricultural production and widespread opposition
+  #4 (-3.949) : New Economic Policy (1921â1929)
+
+
+==========
+Predictions for index 273
+==========
+Model m5_nq_coqa_newsqa and pred pred (3662 preds, 105 failed) :
+Context : No Game No Life (Japanese: ノーゲーム・ノーライフ, Hepburn: Nōgēmu Nōraifu) is a light novel series by Yū Kamiya. It is published under the MF Bunko J imprint with nine novels released between April 25, 2012 and August 25, 2016. The author and his wife, Mashiro Hiiragi, adapted the novels into a manga series for Monthly Comic Alive in 2013. Later that year, an anime adaptation of No Game No Life by Madhouse was announced. It premiered on AT-X between April and July 2014, and was simulcast outside Japan by Crunchyroll. An anime film adaptation of the sixth volume, No Game No Life: Zero, premiered on July 15, 2017. A spinoff manga, No Game No Life, Please!, focusing on the character Izuna, ran from May 27, 2015 to November 27, 2017. The No Game No Life franchise was localized in North America by several companies: Seven Seas Entertainment licensed the manga, Sentai Filmworks the anime, and Yen Press the light novel series.
+
+The series follows Sora and his younger stepsister Shiro, two hikikomori who make up the identity of Blank, an undefeated group of gamers. One day, they are challenged by the god of games to chess and are victorious. As a result, the god summons them to Disboard, a reality which revolves around games. Intent on maintaining their reputation as the undefeated gamers, Sora and Shiro plan to conquer the sixteen ruling species and to usurp the god of games.
+
+The series began receiving recognition in 2014, when it appeared in Kono Light Novel ga Sugoi! and had its volumes placed as one of the top thirty selling novels in Japan. It was reported in May 2017 that over 3 million printed copies are in circulation. The English localization of the manga and anime were also well received: the manga adaption appeared on The New York Times Manga Best Sellers; meanwhile, English reviewers were generally turned away by the first episode of the anime, though reviewers who have completed the series generally praised the character dynamics, game strategies, and animation, while disliking the fan service featuring the underage Shiro.
+Question : where does no game no life anime end
+Target : ['the sixth volume']
+
+Inference :
+  #0 (-0.052) : November 27, 2017
+  #1 (-5.000) : December 27, 2017
+  #2 (-5.496) : October 27, 2017
+  #3 (-5.587) : Disboard
+  #4 (-5.893) : disboard
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_1_4_mean and pred pred (3662 preds, 147 failed) :
+Inference :
+  #0 (-0.167) : November 27, 2017
+  #1 (-2.867) : July 15, 2017
+  #2 (-4.621) : August 25, 2016
+  #3 (-4.991) : June 27, 2017
+  #4 (-5.338) : unknown
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_2_2_dense and pred pred (3662 preds, 131 failed) :
+Inference :
+  #0 (-0.044) : November 27, 2017
+  #1 (-4.727) : December 27, 2017
+  #2 (-5.099) : August 27, 2017
+  #3 (-5.141) : November 27, 2017.
+  #4 (-5.587) : October 27, 2017
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_3_2_dense and pred pred (3662 preds, 168 failed) :
+Inference :
+  #0 (-0.148) : November 27, 2017
+  #1 (-3.122) : December 27, 2017
+  #2 (-3.133) : August 25, 2016
+  #3 (-4.890) : October 27, 2017
+  #4 (-5.271) : September 27, 2017
+
+
+==========
+Predictions for index 902
+==========
+Model m5_nq_coqa_newsqa and pred pred (3662 preds, 105 failed) :
+Context : The Secret of Crickley Hall is a BBC television adaptation by Joe Ahearne of the 2006 supernatural thriller novel of the same name written by the British author James Herbert.
+
+The series presents two parallel dramas. The main storyline, set in 2006, follows the events of the Caleigh family who rent Crickley Hall because Gabe Caleigh (Tom Ellis) gets a short contract in the area; the other is a series of flashbacks following events in 1943 when orphans – who have been evacuated from London during World War II – are living at Crickley Hall.
+
+Gabe Caleigh, his wife Eve, and their children, Loren, Cameron and Cally, live in London. One day Cam goes missing. Eve falls asleep for a few seconds at a playground and he simply disappears. Eleven months later, Gabe suggests relocating the family in the north of England, near the east coast in the hope that a change of scenery will give Eve some comfort, as she clings to the hope that Cam may still be alive.
+Question : the secret of crickley hall how many episodes
+Target : ['3']
+
+Inference :
+  #0 (-1.640) : 10
+  #1 (-1.922) : 8
+  #2 (-2.038) : 13
+  #3 (-2.459) : 12
+  #4 (-2.489) : 6
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_1_4_mean and pred pred (3662 preds, 147 failed) :
+Inference :
+  #0 (-1.479) : 10
+  #1 (-1.816) : 8
+  #2 (-2.083) : 13
+  #3 (-2.575) : 11
+  #4 (-2.765) : 6
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_2_2_dense and pred pred (3662 preds, 131 failed) :
+Inference :
+  #0 (-1.184) : 6
+  #1 (-1.653) : 8
+  #2 (-1.776) : 10
+  #3 (-2.304) : 9
+  #4 (-2.997) : 13
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_3_2_dense and pred pred (3662 preds, 168 failed) :
+Inference :
+  #0 (-0.691) : 6
+  #1 (-1.383) : 10
+  #2 (-2.683) : 8
+  #3 (-3.606) : 12
+  #4 (-3.676) : 7
+
+
+==========
+Predictions for index 977
+==========
+Model m5_nq_coqa_newsqa and pred pred (3662 preds, 105 failed) :
+Context : Following Imperial Japan’s victory in the Russo-Japanese War, with its subsequent withdrawal of Russian influence, and the Taft–Katsura Agreement, in which the United States allegedly agreed not to interfere with Japan in matters concerning Korea, the Japanese government sought to formalize its sphere of influence over the Korean Peninsula.
+
+Delegates of both Empires met in Seoul to resolve differences in matters pertaining to Korea’s future foreign policy; however, with the Korean Imperial palace under occupation by Japanese troops, and the Imperial Japanese Army stationed at strategic locations throughout Korea, the Korean side was at a distinct disadvantage in the discussions.
+Question : who negotiated an agreement with japan concerning the future of korea
+Target : ['Taft']
+
+Inference :
+  #0 (-0.796) : United States
+  #1 (-0.921) : the United States
+  #2 (-3.964) : The United States
+  #3 (-4.215) : Delegates of both Empires met in Seoul to resolve differences in matters pertaining to Koreaâs future foreign policy; however, with the Korean Imperial palace under occupation by Japanese troops, and the Imperial Japanese Army stationed at strategic locations throughout Korea, the Korean side was at a distinct disadvantage in the discussions.
+  #4 (-4.726) : Japan
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_1_4_mean and pred pred (3662 preds, 147 failed) :
+Inference :
+  #0 (-1.080) : Delegates of both Empires met in Seoul to resolve differences in matters pertaining to Koreaâs future foreign policy; however, with the Korean Imperial palace under occupation by Japanese troops, and the Imperial Japanese Army stationed at strategic locations throughout Korea, the Korean side was at a distinct disadvantage in the discussions.
+  #1 (-1.551) : Delegates of both Empires
+  #2 (-1.658) : United States
+  #3 (-2.459) : the United States
+  #4 (-3.406) : delegates of both Empires met in Seoul to resolve differences in matters pertaining to Koreaâs future foreign policy; however, with the Korean Imperial palace under occupation by Japanese troops, and the Imperial Japanese Army stationed at strategic locations throughout Korea, the Korean side was at a distinct disadvantage in the discussions.
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_2_2_dense and pred pred (3662 preds, 131 failed) :
+Inference :
+  #0 (-0.574) : United States
+  #1 (-2.172) : Delegates of both Empires met in Seoul
+  #2 (-2.309) : the United States
+  #3 (-2.422) : Delegates of both Empires met in Seoul to resolve differences in matters pertaining to Koreaâs future foreign policy; however, with the Korean Imperial palace under occupation by Japanese troops, and the Imperial Japanese Army stationed at strategic locations throughout Korea, the Korean side was at a distinct disadvantage in the discussions.
+  #4 (-3.923) : Delegates of both Empires met in Seoul in order to resolve differences in matters pertaining to Koreaâs future foreign policy; however, with the Korean Imperial palace under occupation by Japanese troops, and the Imperial Japanese Army stationed at strategic locations throughout Korea, the Korean side was at a distinct disadvantage in the discussions.
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_3_2_dense and pred pred (3662 preds, 168 failed) :
+Inference :
+  #0 (-0.192) : United States
+  #1 (-2.644) : the United States
+  #2 (-3.838) : Delegates of both Empires
+  #3 (-5.260) : Delegates of both Empires in Seoul
+  #4 (-5.464) : The United States
+
+
+==========
+Predictions for index 1875
+==========
+Model m5_nq_coqa_newsqa and pred pred (3662 preds, 105 failed) :
+Context : Social Security numbers were first issued by the Social Security Administration in November 1935 as part of the New Deal Social Security program. Within three months, 25 million numbers were issued.
+
+On November 24, 1936, 1,074 of the nation's 45,000 post offices were designated "typing centers" to type up Social Security cards that were then sent to Washington, D.C. On December 1, 1936, as part of the publicity campaign for the new program, Joseph L. Fay of the Social Security Administration selected a record from the top of the first stack of 1,000 records and announced that the first Social Security number in history was assigned to John David Sweeney, Jr., of New Rochelle, New York.
+
+Before 1986, people often did not obtain a Social Security number until the age of about 14, since the numbers were used for income tracking purposes, and those under that age seldom had substantial income. The Tax Reform Act of 1986 required parents to list Social Security numbers for each dependent over the age of 5 for whom the parent wanted to claim a tax deduction. Before this act, parents claiming tax deductions were simply trusted not to lie about the number of children they supported. During the first year of the Tax Reform Act, this anti-fraud change resulted in seven million fewer minor dependents being claimed. The disappearance of these dependents is believed to have involved either children who never existed or tax deductions improperly claimed by non-custodial parents.[10] In 1988, the threshold was lowered to 2 years old, and in 1990, the threshold was lowered yet again to 1 year old.[11] Today, an SSN is required regardless of the child's age to receive an exemption.[citation needed] Since then, parents have often applied for Social Security numbers for their children soon after birth; today, it can be done on the application for a birth certificate.[12]
+Question : when did they start assigning social security numbers at birth
+Target : ['1990']
+
+Inference :
+  #0 (-0.546) : November 1935
+  #1 (-1.382) : November 24, 1936
+  #2 (-3.289) : December 1, 1936
+  #3 (-4.666) : 1936
+  #4 (-4.755) : November 1, 1936
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_1_4_mean and pred pred (3662 preds, 147 failed) :
+Inference :
+  #0 (-0.226) : November 1935
+  #1 (-4.270) : November 24, 1936
+  #2 (-4.348) : unknown
+  #3 (-4.757) : December 1, 1936
+  #4 (-4.804) : November 1933
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_2_2_dense and pred pred (3662 preds, 131 failed) :
+Inference :
+  #0 (-0.181) : November 1935
+  #1 (-2.628) : December 1, 1936
+  #2 (-3.667) : 1936
+  #3 (-4.864) : 1935
+  #4 (-5.298) : November 1934
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_3_2_dense and pred pred (3662 preds, 168 failed) :
+Inference :
+  #0 (-0.056) : November 1935
+  #1 (-4.356) : December 1936
+  #2 (-4.388) : 1936
+  #3 (-5.261) : December 1, 1936
+  #4 (-5.330) : December 1935
+
+
+==========
+Predictions for index 2163
+==========
+Model m5_nq_coqa_newsqa and pred pred (3662 preds, 105 failed) :
+Context : Between 2018 and 2027, at least two games each year will be played at Tottenham Hotspur's new stadium in Northumberland Park as part of an agreement between the NFL and Tottenham Hotspur. On October 7, 2015, the league announced that a resolution had been passed to schedule international games at additional locations to London until 2025.[10] On October 22, 2015 it was confirmed that at least two games per year will remain at Wembley until through least 2020 and that the Jacksonville Jaguars will continue to play a home game there annually throughout the agreement.[21] Subsequent to this, on November 3, 2015, the NFL announced that it had reached an agreement with England's Rugby Football Union to host regular season games at Twickenham Stadium from 2016 onwards, with a minimum of three, and as many as five games to be held over the initial agreement period of three years.[22]
+
+In 2016, the Oakland Raiders hosted the Houston Texans on November 21 at Estadio Azteca in Mexico City, at the first International Series game played in Mexico. Previously, the Houston Texans and Pittsburgh Steelers had expressed interest in playing a game at Estadio Azteca (or possibly Estadio Olímpico Universitario) in Mexico City, although Houston was not prepared to give up a home date.[23][24] It was televised as part of ESPN's Monday Night Football, marking the first MNF game broadcast from outside the United States, and ESPN's second broadcast from Mexico City since the 2005 Fútbol Americano game (which was televised as part of ESPN's former incarnation of Sunday Night Football).[25][26]
+
+The 2016 game between the Redskins and Bengals was the first International Series game to go into overtime, the first to end as a tie, and had at the time the highest attendance of all International Series games (later surpassed by the 2017 game between the Ravens and Jaguars, which drew an attendance of 84,592).
+
+For 2017 the series underwent a partial rebrand with four games in London branded as NFL London Games[27] and one game in Mexico City branded as the NFL Mexico Game.[28][not in citation given]
+Question : how many nfl games were played in london
+Target : ['21']
+
+Inference :
+  #0 (-0.232) : four
+  #1 (-2.716) : four games
+  #2 (-3.189) : 4
+  #3 (-3.422) : Four
+  #4 (-4.841) : five
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_1_4_mean and pred pred (3662 preds, 147 failed) :
+Inference :
+  #0 (-0.356) : four
+  #1 (-1.575) : four games
+  #2 (-4.084) : five
+  #3 (-4.257) : 4
+  #4 (-4.807) : Four
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_2_2_dense and pred pred (3662 preds, 131 failed) :
+Inference :
+  #0 (-0.616) : four
+  #1 (-1.347) : 4
+  #2 (-3.158) : four games
+  #3 (-3.446) : 5
+  #4 (-3.558) : 2017
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_3_2_dense and pred pred (3662 preds, 168 failed) :
+Inference :
+  #0 (-0.692) : four
+  #1 (-1.891) : 4
+  #2 (-2.071) : Four
+  #3 (-2.904) : four games
+  #4 (-3.417) : 2018
+
+
+==========
+Predictions for index 2173
+==========
+Model m5_nq_coqa_newsqa and pred pred (3662 preds, 105 failed) :
+Context : The period typically called Romantic varies greatly between different countries and different artistic media or areas of thought. Margaret Drabble described it in literature as taking place "roughly between 1770 and 1848",[23] and few dates much earlier than 1770 will be found. In English literature, M. H. Abrams placed it between 1789, or 1798, this latter a very typical view, and about 1830, perhaps a little later than some other critics.[24] Others have proposed 1780–1830.[25] In other fields and other countries the period denominated as Romantic can be considerably different; musical Romanticism, for example, is generally regarded as only having ceased as a major artistic force as late as 1910, but in an extreme extension the Four Last Songs of Richard Strauss are described stylistically as "Late Romantic" and were composed in 1946–48.[26] However, in most fields the Romantic Period is said to be over by about 1850, or earlier.
+
+The early period of the Romantic Era was a time of war, with the French Revolution (1789–1799) followed by the Napoleonic Wars until 1815. These wars, along with the political and social turmoil that went along with them, served as the background for Romanticism.[27] The key generation of French Romantics born between 1795–1805 had, in the words of one of their number, Alfred de Vigny, been "conceived between battles, attended school to the rolling of drums".[28] According to Jacques Barzun, there were three generations of Romantic artists. The first emerged in the 1790s and 1800s, the second in the 1820s, and the third later in the century.[29]
+Question : when did the romanticism period start and end
+Target : ['1780–1830']
+
+Inference :
+  #0 (-1.560) : about 1850
+  #1 (-1.564) : between 1770 and 1848
+  #2 (-2.496) : 1770 and 1848
+  #3 (-3.029) : 1830
+  #4 (-3.054) : roughly between 1770 and 1848
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_1_4_mean and pred pred (3662 preds, 147 failed) :
+Inference :
+  #0 (-0.678) : 1848
+  #1 (-1.239) : about 1850
+  #2 (-2.240) : about 1850, or earlier
+  #3 (-3.640) : between 1770 and 1848
+  #4 (-5.066) : about 1830
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_2_2_dense and pred pred (3662 preds, 131 failed) :
+Inference :
+  #0 (-0.689) : roughly between 1770 and 1848
+  #1 (-2.569) : between 1789, or 1798, and about 1830
+  #2 (-3.058) : between 1770 and 1848
+  #3 (-3.407) : between 1789, or 1798, and about 1830, perhaps a little later than some other critics
+  #4 (-3.611) : about 1830
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_3_2_dense and pred pred (3662 preds, 168 failed) :
+Inference :
+  #0 (-0.701) : roughly between 1770 and 1848
+  #1 (-1.940) : roughly "roughly" between 1770 and 1848
+  #2 (-3.173) : roughly "roughly between 1770 and 1848"
+  #3 (-3.604) : roughly between 1770 and 1848[23]
+  #4 (-4.029) : 1770
+
+
+==========
+Predictions for index 2190
+==========
+Model m5_nq_coqa_newsqa and pred pred (3662 preds, 105 failed) :
+Context : Keeping Up with the Kardashians is an American reality television series that has aired on E! since October 14, 2007. The series has aired thirteen seasons, and focuses on the personal and professional lives of the Kardashian–Jenner family. Its premise was originated with Ryan Seacrest, who additionally serves as an executive producer. The series focuses on sisters Kourtney, Kim, and Khloé Kardashian.
+
+It additionally places emphasis on their brother Rob Kardashian, their mother Kris Jenner, their step-parent Caitlyn Jenner, their half-sisters Kendall and Kylie Jenner, and Kourtney's now ex-boyfriend, Scott Disick. Khloé's ex-husband Lamar Odom developed a major position as part of the supporting cast in the fourth season, though he was not a regular cast member in following seasons, and rarely appeared in season eight while attempting to fix his marriage with Khloé. In seasons eight and nine, Caitlyn's children Brody and Brandon, and Brandon's wife, Leah became recurring cast members.
+
+Keeping Up with the Kardashians is often criticized for emphasizing the "famous for being famous" concept and appearing to fabricate aspects of its storyline. The series has produced the spin-offs Kourtney and Kim Take Miami, Kourtney and Kim Take New York, Khloé & Lamar, Kourtney and Khloé Take The Hamptons, Dash Dolls, I Am Cait, Kocktails with Khloé, Revenge Body with Khloé Kardashian, Rob & Chyna, and Life of Kylie.
+
+As of December 10, 2017 (2017-12-10), 205 original episodes of Keeping Up with the Kardashians have aired concluding the fourteen seasons.
+Question : latest season on keeping up with the kardashians
+Target : ['fourteen', '14']
+
+Inference :
+  #0 (-0.825) : 2017
+  #1 (-1.808) : life of Kylie
+  #2 (-2.991) : Life of Kylie
+  #3 (-3.856) : 17
+  #4 (-3.862) : 2017-12-10
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_1_4_mean and pred pred (3662 preds, 147 failed) :
+Inference :
+  #0 (-0.335) : season eight
+  #1 (-2.937) : nine
+  #2 (-3.045) : Season eight
+  #3 (-3.358) : season nine
+  #4 (-4.191) : season eight while attempting to fix his marriage with KhloÃ©
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_2_2_dense and pred pred (3662 preds, 131 failed) :
+Inference :
+  #0 (-0.896) : 9
+  #1 (-2.258) : 8
+  #2 (-2.741) : 10
+  #3 (-2.748) : nine
+  #4 (-3.648) : 2017
+
+
+Model m5_nq_coqa_newsqa_mag_off_entq_ct_wt_ib_3_2_dense and pred pred (3662 preds, 168 failed) :
+Inference :
+  #0 (-0.543) : 2017
+  #1 (-1.963) : 2017-18
+  #2 (-3.322) : 2017â18
+  #3 (-3.326) : 2017/18
+  #4 (-4.397) : 10

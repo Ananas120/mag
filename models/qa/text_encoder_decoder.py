@@ -1,3 +1,15 @@
+
+# Copyright (C) 2022 Langlois Quentin. All rights reserved.
+# Licenced under the Affero GPL v3 Licence (the "Licence").
+# you may not use this file except in compliance with the License.
+# See the "LICENCE" file at the root of the directory for the licence information.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import logging
 import numpy as np
 import pandas as pd
@@ -5,12 +17,12 @@ import tensorflow as tf
 
 from loggers import timer
 from utils import pad_batch
-from models.qa.base_qa_generator import BaseQAGenerator
+from models.qa.base_generator import BaseGenerator
 from custom_architectures.transformers_arch.bart_arch import Bart
 
 time_logger = logging.getLogger('timer')
 
-class TextEncoderDecoder(BaseQAGenerator):
+class TextEncoderDecoder(BaseGenerator):
     def __init__(self, lang, input_format = None, output_format = None, ** kwargs):
         super().__init__(lang, input_format = None, output_format = None, ** kwargs)
 
